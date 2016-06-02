@@ -6,7 +6,7 @@
 
 %%%%%%%%%%%%%%%%%%
 
-This script contains all functions which are needed to construct the total model of AGN. 
+This script contains functions which are needed to construct the total model of AGN. 
 The functions here translate the parameter space points into total fluxes dependin on the models chosen.
 
 Functions contained here are the following:
@@ -23,20 +23,12 @@ MOCKerrors
 """
 
 import numpy as np
-import math
-from math import exp,log,pi
+from math import exp,log,pi, sqrt
 import matplotlib.pyplot as plt
 from numpy import random,argsort,sqrt
-import re
-import os
 import time
-from GENERAL_AGNfitter import NearestNeighbourSimple2D, NearestNeighbourSimple1D, extrap1d
-from scipy import interpolate 
-from collections import defaultdict
-from scipy.interpolate import interp1d, UnivariateSpline
-from numpy import array
 from scipy.integrate import quad, trapz
-from math import sqrt
+from astropy import constants as const
 
 
 """
@@ -67,12 +59,7 @@ def DATA (str, sourceline):
 	- y : Flux _nu
 	- yerr: error on Flux_nu
 	"""
-	#=================================
-	# BOOTES FIELD
-	#=================================
 
-	#if str == 'data/catalog_Bootes_hotcold_AGN.txt':
-#	if str == 'data/catalog_WENDY_all_FIR.txt':
 	if str == 'data/catalog_WENDY_FIR_missing.txt':
 		#opening table	
 		data = open(str, 'r') 
@@ -97,9 +84,6 @@ def DATA (str, sourceline):
 		z =  float(column[1])
 		Dlum= z2Dlum(z)
 		for i in range(18):
-
-
-
 			nu_Angstrom=float(column[2+3*i])#observed
 
 			nu = np.log10(c/ (Angst2m * nu_Angstrom)*(1+z))
@@ -119,7 +103,6 @@ def DATA (str, sourceline):
 			else: 
 				fluxerr = flux * 0.1
 
-
 	
 			nu=float(nu)
 			
@@ -129,12 +112,7 @@ def DATA (str, sourceline):
 			data_flux.append(flux)
 			data_fluxerr.append(fluxerr)	
 
-	#=================================
-	# BOOTES FIELD
-	#=================================
 
-	#if str == 'data/catalog_Bootes_hotcold_AGN.txt':
-#	elif str == 'data/catalog_DEEP_all_FIR.txt':
 	elif str == 'data/catalog4AGNfitter_DEEP2.txt':	
 		#opening table	
 		data = open(str, 'r') 
@@ -151,7 +129,6 @@ def DATA (str, sourceline):
 
 		line = data.readline()
 
-		#extract freq anf fluxes in all 19? 20? filters and make list
 		column = line.strip().split()
 
 		c = 2.997e8
@@ -160,9 +137,7 @@ def DATA (str, sourceline):
 		Dlum= z2Dlum(z)
 		for i in range(18):
 
-
-
-			nu_Angstrom=float(column[2+3*i])#observed
+			nu_Angstrom=float(column[2+3*i])
 
 			nu = np.log10(c/ (Angst2m * nu_Angstrom)*(1+z))
 			nu_exp = c/ (Angst2m * nu_Angstrom)
@@ -190,117 +165,6 @@ def DATA (str, sourceline):
 			data_nu.append(nu)
 			data_flux.append(flux)
 			data_fluxerr.append(fluxerr)	
-
-	#=================================
-	# FOR JONATHANS SAMPLE FORMAT
-	#=================================
-
-	elif str == 'data/jonathan_sample_right.txt':
-
-		#opening table	
-		data = open(str, 'r') 
-		#create lists (data_f -> frequency)
-		data_nu = []
-		data_flux = []
-		data_fluxerr = []
-		#ignoring header and reading line
-	
-		header = data.readline()
-		for i in range(0, sourceline):
-			header = data.readline()
-
-		line = data.readline()
-
-		#extract freq anf fluxes in all 19? 20? filters and make list
-		column = line.strip().split()
-
-		c = 2.997e8
-		Angst2m= 1e-10
-		z =  float(column[1])
-		Dlum= z2Dlum(z)
-		for i in range(15): 	
-		  
-		    flag_l = float(column[9+5*i])
-		    flag_e = float(column[11+5*i])	
-		    flag_l = int(flag_l) 
-		    flag_e = int(flag_e) 		
-		    if flag_l ==1:	
-			nu_Angstrom=float(column[8+5*i])#observed	
-			print 'WAVELENGTH', nu_Angstrom
-			nu = np.log10(c/ (Angst2m * nu_Angstrom))
-			print 'NU', nu, 'REDSHIFT', z
-			nu_exp = c/ (Angst2m * nu_Angstrom)
-			lum= float(column[10+5*i])
-			print 'LUMINOSITY:', lum
-			flux= lum /(4. * pi * Dlum**2.) /nu_exp
-			print 'FLUX', flux
-			if flag_e == 1:
-			        fluxerr = float(column[12+5*i]) / (4. * pi * Dlum**2.) /nu_exp
-			else: 
-				fluxerr = flux * 0.1
-	    		if flag_l == 1:
-	
-				nu=float(nu)
-				flux=float(flux)
-				fluxerr=float(fluxerr)
-				data_nu.append(nu)
-				data_flux.append(flux)
-				data_fluxerr.append(fluxerr)	
-
-	#=================================
-	# FOR EDUARDOS SAMPLE FORMAT
-	#=================================
-	elif str == 'data/eduardo_sample.txt':
-	#opening table	
-		data = open(str, 'r') 
-		#create lists (data_f -> frequency)
-		data_nu = []
-		data_flux = []
-		data_fluxerr = []
-		#ignoring header and reading line
-	
-		header = data.readline()
-		for i in range(0, sourceline):
-			header = data.readline()
-
-		line = data.readline()
-
-		#extract freq anf fluxes in all 19? 20? filters and make list
-		column = line.strip().split()
-
-		c = 2.997e8
-		Angst2m= 1e-10
-		z =  float(column[1])
-	
-		Dlum= z2Dlum(z)
-		for i in range(14): 	
-	
-		    flag_l = float(column[9+5*i])
-		    flag_e = float(column[11+5*i])	
-		    flag_l = int(flag_l) 
-		    flag_e = int(flag_e) 		
-		    if flag_l ==1:	
-			nu_Angstrom=float(column[8+5*i])#observed	
-			print 'WAVELENGTH', nu_Angstrom
-			nu = np.log10(c/ (Angst2m * nu_Angstrom) )
-			print 'NU', nu, np.log10(c/ (Angst2m * nu_Angstrom) ) ,'REDSHIFT', z
-			nu_exp = c/ (Angst2m * nu_Angstrom)
-			flux_Jansky= float(column[10+5*i])
-			flux= flux_Jansky * 1e-21
-			print 'FLUX', flux
-			if flag_e == 1:
-			        fluxerr = float(column[12+5*i]) * 1e-21
-			else: 
-				fluxerr = flux * 0.1
-	    		if flag_l == 1:
-		#	print i  	
-				nu=float(nu)
-				flux=float(flux)
-				fluxerr=float(fluxerr)
-				data_nu.append(nu)
-				data_flux.append(flux)
-				data_fluxerr.append(fluxerr)	
-
 
 	#=================================
 	# FOR MOCK
@@ -339,9 +203,6 @@ def DATA (str, sourceline):
 			data_fluxerr.append(fluxerr)	
 
 
-	#=================================
-	# FOR BETA'S XMM-COSMOS SAMPLE FORMAT
-	#=================================
 	elif str =='beta':
 		#opening table	
 		data = open(str, 'r') 
@@ -397,17 +258,18 @@ def DATA (str, sourceline):
 
 	#------------------------------------------------
 	
-	else:	
-		#opening table	
+	else:
+
+		#Opening table	
 		data = open(str, 'r') 
-		#create lists (data_f -> frequency)
+
 		data_nu = []
 		data_flux = []
 		data_fluxerr = []
-		#ignoring header and reading line
-	
+
 		header = data.readline()
 
+		#Go to sourceline
 		for i in range(0, sourceline):
 			header = data.readline()
 
@@ -420,9 +282,9 @@ def DATA (str, sourceline):
 		Angst2m= 1e-10
 		z =  float(column[1])
 		Dlum= z2Dlum(z)
+
+		# Calculate each band
 		for i in range(18):
-
-
 
 			nu_Angstrom=float(column[2+3*i])#observed
 
@@ -442,8 +304,6 @@ def DATA (str, sourceline):
 				fluxerr = fluxerr * 1e-23
 			else: 
 				fluxerr = flux * 0.1
-
-
 	
 			nu=float(nu)
 			
@@ -454,26 +314,19 @@ def DATA (str, sourceline):
 			data_fluxerr.append(fluxerr)	
 
 
-	#NUMBER OF SOURCE
-
-	#convert list2array
+	#Convert list2array
 	data_nu = np.array(data_nu)
 	data_Fnu = np.array(data_flux)
 	data_Fnu_err = np.array(data_fluxerr)
 	
 
-	#Converting FLUX2LUMINOSiTY
-	# Fluxes in erg s-1 cm-2 Hz-1
+	sorted_indices = data_nu.argsort()
 
-	sorted_indices = data_nu.argsort()	
 	data_nu = data_nu[sorted_indices] 
-
 	data_nu_obs = np.log10(10**(data_nu) / (1.+z))
 
-	#L_nu*nu     (nu has to be in observed frame! therefore, nu_obs= nu_res/(1+z))
-
+	#nu has to be in observed frame! therefore, nu_obs= nu_res/(1+z))
 	data_Fnu = data_Fnu[sorted_indices] 
-
 	data_Fnu_err = data_Fnu_err[sorted_indices]
 
 
@@ -718,78 +571,6 @@ def REDSHIFT(str, sourceline):
 
 
 
-#====================#
-#MOCK ERRORS
-#=========================
-
-def MOCKerrors(str, sourceline):
-	
-	data = open(str, 'r') 
-	#create lists (data_f -> frequency)
-	data_nu = []
-	data_flux = []
-	data_fluxerr = []
-	#ignoring header and reading line
-	header = data.readline()
-	
-	for i in range(0, sourceline):
-		header = data.readline()
-
-	line = data.readline()
-
-	#extract freq anf fluxes in all 19? 20? filters and make list
-	column = line.strip().split()
-	for i in range(20):
-		flux= column[1+4*i]
-		nu=column[2+4*i]	
-		fluxerr = column[3+4*i]
-		flag = column[4+4*i]
-		flag = int(flag) 
-	    	if flag == 0:
-		
-			nu=float(nu)
-			flux=float(flux)
-			fluxerr=float(fluxerr)
-			data_nu.append(nu)
-			data_flux.append(flux)
-			data_fluxerr.append(fluxerr)
-		elif flag == -1:
-			nu=float(nu)
-			flux1=0.5*float(flux)
-			fluxerr=flux1
-			data_nu.append(nu)
-			data_flux.append(flux1)
-			data_fluxerr.append(fluxerr)				
-
-	#NUMBER OF SOURCE
-	name = column[0]
-
-	#REDSHIFT
-	z=column[81]
-	z=float(z)
-
-	#convert list2array
-	data_nu_rest = np.array(data_nu)
-	
-	errors_XMMCOSMOS_bands_orderoffile = np.array([0.093, 0.099, 0.092, 0.098, 0.095, 0.097, 0.093, 0.094, 0.0795, 0.080, 0.088, 0.100, 0.277, 0.105, 0.1290, 0.045, 0.065, 0.055, 0.369, 0.235 ])
-	#Converting FLUX2LUMINOSiTY
-	# Fluxes in erg s-1 cm-2 Hz-1
-
-	sorted_indices = data_nu_rest.argsort()	
-
-	data_nu_rest = data_nu_rest[sorted_indices]  
-	data_nu_obs = np.log10(10**data_nu_rest /(1+z))
-
-	errors_XMMCOSMOS_bands = errors_XMMCOSMOS_bands_orderoffile[sorted_indices] 
-
-
-	return data_nu_obs, errors_XMMCOSMOS_bands
-
-
-
-
-
-
 
 def z2Dlum(z):
 	
@@ -822,4 +603,3 @@ def z2Dlum(z):
 
 	return dlum_cm
       
-
