@@ -81,7 +81,6 @@ def DATA (str, sourceline):
 		#c = 2.997e8
 		Angst2m= 1e-10
 		z =  float(column[1])
-		Dlum= z2Dlum(z)
 		for i in range(18):
 			nu_Angstrom=float(column[2+3*i])#observed
 
@@ -133,7 +132,6 @@ def DATA (str, sourceline):
 		c = 2.997e8
 		Angst2m= 1e-10
 		z =  float(column[1])
-		Dlum= z2Dlum(z)
 		for i in range(18):
 
 			nu_Angstrom=float(column[2+3*i])
@@ -226,7 +224,8 @@ def DATA (str, sourceline):
 			fluxerr = column[3+4*i]
 			flag = column[4+4*i]
 			flag = int(flag) 
-		    	if flag == 0:
+
+			if flag == 0:
 	
 				nu=float(nu)
 				flux=float(flux)
