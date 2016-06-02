@@ -28,8 +28,7 @@ import matplotlib.pyplot as plt
 from numpy import random,argsort,sqrt
 import time
 from scipy.integrate import quad, trapz
-from astropy import constants as const
-
+from astropy.constants import c
 
 """
 	DATA
@@ -79,7 +78,7 @@ def DATA (str, sourceline):
 		#extract freq anf fluxes in all 19? 20? filters and make list
 		column = line.strip().split()
 
-		c = 2.997e8
+		#c = 2.997e8
 		Angst2m= 1e-10
 		z =  float(column[1])
 		Dlum= z2Dlum(z)
