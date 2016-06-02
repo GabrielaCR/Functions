@@ -10,53 +10,52 @@ This script contains all  functions used in order to visualize the output of the
     
 """
 
-from __future__ import division
-import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib import rc
+import matplotlib 
 #matplotlib.use('Agg')
-
-import sys, os, pdb, pprint
-import pylab as pl
-from math import exp,log,pi      
+import sys, os
+import math 
 import numpy as np
 import triangle
 import time
-from scipy.interpolate import interp1d
-from scipy.integrate import simps, trapz, romberg
-
-scipy = True
-try:
-    from scipy.stats import gaussian_kde
-    from scipy.spatial import Delaunay
-    from scipy.optimize import minimize
-except ImportError:
-    scipy = False
+import scipy
 
 import GENERAL_AGNfitter as general
 import MODEL_AGNfitter as model
-from DATA_AGNfitter import DATA, NAME, REDSHIFT
 import DICTIONARIES_AGNfitter as dicts
 import PARAMETERSPACE_AGNfitter as parspace
-from GENERAL_AGNfitter import  NearestNeighbourSimple1D
 
 
 
-def main(filename, catalog, sourceline,  P, folder, opt, dict_modelsfiles, filterdict, path_AGNfitter, dict_modelfluxes):
+def main(filename, data, P, opt, dict_modelsfiles, filterdict, dict_modelfluxes):
 
+    """
+    input: 
+    bugs:
+        - Lyman alpha beeing broken here
 
-    z = REDSHIFT(catalog, sourceline)
+    """
+
+    data_nus = data.nus
+    ydata = data.fluxes
+    ysigma= data.fluxerrs
     
-    sourcename = NAME(catalog, sourceline)      
- 
-    data_nus, ydata, ysigma = DATA(catalog, sourceline)
+    folder = data.output_folder
+    sourceline = data.sourceline
+    catalog = data.catalog
+    sourcename = data.name
+    z = data.z 
+    path_AGNfitter = data.path
 
+
+
+ 
     array = np.arange(len(data_nus))
+    #below Ly-alpha and non detections
     index_dataexist = array[(data_nus< np.log10(10**(15.38)/(1+z))) & (ydata>-99.)]
 
 
     path = os.path.abspath(__file__).rsplit('/', 1)[0]
-
     if not os.path.lexists(folder+str(sourcename)+'/samples_mcmc.sav'):
         print 'Error: The MCMC sampling has not been perfomed yet, or the chains were not saved properly.'
 
@@ -64,37 +63,34 @@ def main(filename, catalog, sourceline,  P, folder, opt, dict_modelsfiles, filte
 
     samples = general.loadobj(filename)
     nwalkers, nsamples, npar = samples['chain'].shape
-
-    nwalkers, nsamples, npar = samples['chain'].shape
-    
-
     mean_accept =  samples['accept'].mean()
     print 'Mean acceptance fraction', mean_accept
-    if opt['plottraces_burn-in'] :  
-        
 
-#=================== BURN-IN =================
- 
+#===================MCMC===================== 
+
+    if opt['plottraces_burn-in'] :   
+
       if filename.startswith(folder+str(sourcename)+'/samples_burn1-2-3'):
-
         if opt['plottraces_burn-in'] :    
             print 'Plotting traces of burn-in'
             fig, nwplot = plot_trace_burnin123(P, samples['chain'], samples['lnprob'])
             fig.suptitle('Chain traces for %i steps of %i walkers' % (nwplot,nwalkers))
             fig.savefig(folder+str(sourcename)+'/traces1-2-3.' +  opt['plotformat'])
-            pl.close(fig)   
+            plt.close(fig)  
+      else: 
+        print 'Burn-in phase has not finished or not saved in samples_burn1-2-3.sav '
 
-        if opt['plotautocorr'] :
+    if opt['plotautocorr'] :
      
-            fig, axes = general.plot_autocorr(samples['chain'], P)
-            fig.suptitle('Autocorrelation for %i walkers with %i samples. '
-                         '(Mean acceptance fraction %.2f)' %
-                         (nwalkers, nsamples, mean_accept), fontsize=14)
-            fig.savefig(folder+str(sourcename)+'/autocorr1-2-3.' +  opt['plotformat'])
+        fig, axes = general.plot_autocorr(samples['chain'], P)
+        fig.suptitle('Autocorrelation for %i walkers with %i samples. '
+                    '(Mean acceptance fraction %.2f)' %
+                    (nwalkers, nsamples, mean_accept), fontsize=14)
+        fig.savefig(folder+str(sourcename)+'/autocorr1-2-3.' +  opt['plotformat'])
 
 #===================MCMC===================== 
 
-    if filename.startswith(folder+str(sourcename)+'/samples_mcmc'):
+    if filename.startswith(data.output_folder+str(data.name)+'/samples_mcmc'):
 
         #Thinning
         Ns, Nt = opt['Nsample'], opt['Nthinning']
@@ -119,23 +115,21 @@ def main(filename, catalog, sourceline,  P, folder, opt, dict_modelsfiles, filte
                                                  #for doing fewer superposed plots
     
 
-        all_nus, FLUXES4plotting, filtered_modelpoints = fluxes_arrays(data_nus, catalog, sourceline, dict_modelsfiles, filterdict, chain_flat_sorted, Nthin_compute,path_AGNfitter, dict_modelfluxes)
-        # calculate the model fluxes, mapping parameter space values to observables.
-        
-        
+        all_nus, FLUXES4plotting, filtered_modelpoints = fluxes_arrays(data, dict_modelsfiles, filterdict, chain_flat_sorted, Nthin_compute, dict_modelfluxes)
+         
 #===================WRITING====================
 
 
-#        if opt['printpar_maxlikelihood']:
-#            print 'Printing parameters of maximum likelihood'
-#            distance = model.z2Dlum(z)
-#            Mstar, SFR, SFR_file = model.stellar_info_best(best_fit_par, catalog, sourceline)
-#            output = np.hstack((best_fit_par, np.log10(Mstar), SFR, SFR_file, lnprob_max))
-#            output_names = np.array(['tau ','age',' nhv',' irlum ','SB',' BB ','GA',' TO ','BBebv ','GAebv ','Mstar ','SFR ','SFR_file','ln_likelihood'])                                           
-#            np.savetxt(folder + str(sourcename)+'/max_likelihood_parameters_'+ str(sourcename) + '.txt' , np.column_stack((output, output_names)), delimiter = " ",fmt="%s" ,header="Maximum likelihood parameters (Chi2Minimization)")
+        if opt['printpar_maxlikelihood']:
+            print 'Printing parameters of maximum likelihood'
+            distance = model.z2Dlum(z)
+            Mstar, SFR, SFR_file = model.stellar_info_best(best_fit_par, catalog, sourceline)
+            output = np.hstack((best_fit_par, np.log10(Mstar), SFR, SFR_file, lnprob_max))
+            output_names = np.array(['tau ','age',' nhv',' irlum ','SB',' BB ','GA',' TO ','BBebv ','GAebv ','Mstar ','SFR ','SFR_file','ln_likelihood'])                                           
+            np.savetxt(folder + str(sourcename)+'/max_likelihood_parameters_'+ str(sourcename) + '.txt' , np.column_stack((output, output_names)), delimiter = " ",fmt="%s" ,header="Maximum likelihood parameters (Chi2Minimization)")
 
 
-#=================PLOT_TRACES===================
+    #=================PLOT_TRACES===================
 
         if opt['plottraces_mcmc'] : 
 
@@ -143,9 +137,9 @@ def main(filename, catalog, sourceline,  P, folder, opt, dict_modelsfiles, filte
             fig, nwplot = plot_trace_mcmc(P, samples['chain'],samples['lnprob'])
             fig.suptitle('Chain traces for %i of %i walkers. Main acceptance fraction: %f' % (nwplot,nwalkers,mean_accept))
             fig.savefig(folder+str(sourcename)+'/traces_mcmc.' + opt['plotformat'])
-            pl.close(fig)
+            plt.close(fig)
 
-#===============INTEGRATE LUMINOSITIES=================
+    #===============INTEGRATE LUMINOSITIES=================
 
 
         if opt['integratedlum']:
@@ -154,15 +148,15 @@ def main(filename, catalog, sourceline,  P, folder, opt, dict_modelsfiles, filte
             L0, L1, L2, L3, L4 , L5=integrated_luminosities_arrays(all_nus, FLUXES4plotting, Nthin_compute, total_length_chain, z, folder, sourcename)
             #Loptuv_BB, Loptuv_GA, LMir_TO, LMir_SB, Loptuv_BB, LFir_8-1000
 
-#==================PLOT PDF TRIANGLE=================
+    #==================PLOT PDF TRIANGLE=================
 
         if opt['posteriortriangle']:
             print 'Plotting triangle of PDFs of parameters.'
             figure = plot_posteriors_triangle_pars(chain_flat, best_fit_par)
             figure.savefig(folder+str(sourcename)+'/posterior_triangle_pars_'+str(sourcename)+'.' + opt['plotformat'])
-            pl.close(figure)
+            plt.close(figure)
 
-### change this opt to opt['posteriortriangleofluminosities]
+    ### change this opt to opt['posteriortriangleofluminosities]
         if opt['posteriortrianglewithluminosities'] :
 
             if not os.path.lexists(folder+str(sourcename)+'/integrated_luminosities_'+str(sourcename)+'.txt'):
@@ -174,52 +168,28 @@ def main(filename, catalog, sourceline,  P, folder, opt, dict_modelsfiles, filte
 
             figure2= plot_posteriors_triangle_other_quantities(chain_others)
             figure2.savefig(folder+str(sourcename)+'/posterior_triangle_others_'+str(sourcename)+'.'+ opt['plotformat'])
-            pl.close(figure2)   
+            plt.close(figure2)   
 
 
-#-==========PRINT PARAMETERS WITH UNCERTAINTIES=============
+    #-==========PRINT PARAMETERS WITH UNCERTAINTIES=============
 
         if opt['printpar_meanwitherrors']:
 
             if not opt['integratedlum']:
                 L0, L1, L2, L3, L4, L5 =integrated_luminosities_arrays(all_nus, FLUXES4plotting, Nthin_compute, total_length_chain ,z, folder, sourcename)
-                
+                    
             print 'Printing mean values of the parameters with corresponding errors.'
 
             Mstar, SFR, SFR_file = stellar_info_array(chain_flat_sorted, catalog, sourceline, Nthin_compute)
-        
+            
             SFR_IR = model.sfr_IR(L5)
-	 	
             
             chain_pars_and_others = np.column_stack((chain_flat_sorted, Mstar, SFR, SFR_file, SFR_IR, L0, L1, L2, L3, L4, L5 ))
             tau_e, age_e, nh_e, irlum_e, SB_e, BB_e, GA_e, TO_e, BBebv_e, GAebv_e,Mstar_e, SFR_e, SFR_file_e, SFR_IR_e, L0_e, L1_e, L2_e, L3_e, L4_e, L5_e= parameters_with_errors(chain_pars_and_others)
             parameters_with_errors_transpose= np.transpose(parameters_with_errors(chain_pars_and_others))
 
-            # L6_e_transpose = np.transpose(L6_e)
-
-
-            # Mstar_e, SFR_e, SFR_file_e = model.stellar_info(parameters_with_errors_transpose, catalog, sourceline)
-            # SFR_IR_e = model.sfr_IR(L6_e)
-
-
-            # Mstar_e = np.reshape(Mstar_e,(-1,1))
-            # SFR_e = np.reshape(SFR_e,(-1,1))
-            # SFR_file_e = np.reshape(SFR_file_e,(-1,1))      
-            # SFR_IR_e = np.reshape(SFR_IR_e, (-1,1))
-            
-           
-        #L0_e, L1_e, L2_e, L3_e, L4_e is L_sb, L_bbb, L_ga, L_to, Lbb_dered
-
-#            output_error = np.column_stack((tau_e, age_e, nh_e, irlum_e, SB_e, BB_e, GA_e, TO_e, BBebv_e, GAebv_e, Mstar_e, SFR_e, SFR_file_e, L0_e, L1_e, L2_e, L3_e, L4_e, L5_e, SFR_IR_e)) 
             output_error = np.column_stack((tau_e, age_e, nh_e, irlum_e, SB_e, BB_e, GA_e, TO_e, BBebv_e, GAebv_e, Mstar_e, SFR_e, SFR_file_e, L0_e, L1_e, L2_e, L3_e, L4_e, L5_e, SFR_IR_e)) 
             np.savetxt(folder + str(sourcename)+'/parameters_with_errors_3_'+str(sourcename)+'.txt' , output_error, delimiter = " ",fmt="%1.4f" ,header="tau_e, age_e, nh_e, irlum_e, SB_e, BB_e, GA_e, TO_e, BBebv_e, GAebv_e, Mstar_e, SFR_e, SFR_file_e, L_sb, L_bbb, L_ga, L_to, Lbb_dered, Lfir_SFR ,SFR_IR_e")
-
-
-        if opt['printpar_onesigmarealisations']:
-            #ERASE
-            print 'Printint all values of the parameters corresponding to realisation with the best 65% likelihoods.'
- 
-#-==========PRINT MAX LIKELIHOOD=============
 
 
         if opt['printpar_maxlikelihood']:
@@ -245,13 +215,13 @@ def main(filename, catalog, sourceline,  P, folder, opt, dict_modelsfiles, filte
 
         if opt['plotSEDbest']:
 
-            fig = PLOT_SED_bestfit(sourcename, data_nus, ydata, ysigma, z, all_nus, FLUXES4plotting, filtered_modelpoints, index_dataexist)
+            fig = PLOT_SED_bestfit(data, all_nus, FLUXES4plotting, filtered_modelpoints, index_dataexist)
             plt.savefig(folder+str(sourcename)+'/SED_best_'+str(sourcename)+'.pdf', format = 'pdf')
             plt.close(fig)
 
         if opt['plotSEDrealizations']:
 
-            fig = PLOT_SED_manyrealizations(sourcename, data_nus, ydata, ysigma, z, all_nus, FLUXES4plotting, Nrealizations, filtered_modelpoints, index_dataexist)
+            fig = PLOT_SED_manyrealizations(data, all_nus, FLUXES4plotting, Nrealizations, filtered_modelpoints, index_dataexist)
             plt.savefig(folder+str(sourcename)+'/SED_realizations_'+str(sourcename)+'.pdf', format = 'pdf')
             plt.close(fig)
 
@@ -271,9 +241,9 @@ def plot_trace_mcmc(P, chain, lnprob, nwplot=50):
     """
 
 #-- Latex -------------------------------------------------
-    rc('text', usetex=True)
-    rc('font', family='serif')
-    rc('axes', linewidth=1.5)
+    matplotlib.rc('text', usetex=True)
+    matplotlib.rc('font', family='serif')
+    matplotlib.rc('axes', linewidth=1.5)
 #-------------------------------------------------------------
 
     nwalkers, nsample, npar = chain.shape
@@ -301,7 +271,7 @@ def plot_trace_mcmc(P, chain, lnprob, nwplot=50):
     ax.set_xlabel(r'\textit{Steps}', fontsize=12)
     ax.set_ylabel(r'\textit{Walkers}',fontsize=12)
 
-    pl.close(fig)
+    plt.close(fig)
 
     return fig, nwplot
 
@@ -372,7 +342,7 @@ def integrate_luminosities(x, M1,M2,M3,M4,Mtot):
     x_Lir = 10**(x[indexa])
     TOR_Lir = M4[indexa]/x_Lir  
 
-    Lir_agn = np.log10(trapz(TOR_Lir, x=x_Lir))
+    Lir_agn = np.log10(scipy.integrate.trapz(TOR_Lir, x=x_Lir))
 
     #    L_MIR-TORUS
 
@@ -383,7 +353,7 @@ def integrate_luminosities(x, M1,M2,M3,M4,Mtot):
     x_Mir = 10**(x[indexe])
     TOR_Mir = M4[indexe]/x_Mir  
 
-    LMir_TO = np.log10(trapz(TOR_Mir, x=x_Mir))
+    LMir_TO = np.log10(scipy.integrate.trapz(TOR_Mir, x=x_Mir))
 
 
        #    L_MIR- STARBURST
@@ -395,7 +365,7 @@ def integrate_luminosities(x, M1,M2,M3,M4,Mtot):
     x_Mir = 10**(x[indexe])
     SB_Mir = M1[indexe]/x_Mir  
 
-    LMir_SB = np.log10(trapz(SB_Mir, x=x_Mir))
+    LMir_SB = np.log10(scipy.integrate.trapz(SB_Mir, x=x_Mir))
 
 
     #   L_FIR
@@ -407,7 +377,7 @@ def integrate_luminosities(x, M1,M2,M3,M4,Mtot):
     x_Lfir = 10**(x[indexb])
     Mtot_Lfir = M1[indexb]/x_Lfir
 
-    Lfir = np.log10(trapz(Mtot_Lfir, x=x_Lfir))
+    Lfir = np.log10(scipy.integrate.trapz(Mtot_Lfir, x=x_Lfir))
 
     #   L_BOL BIG BLUE BUMP 
 
@@ -417,7 +387,7 @@ def integrate_luminosities(x, M1,M2,M3,M4,Mtot):
     x_Lbol = 10**(x[indexc])
     Lbol_bbb = M2[indexc]/x_Lbol
 
-    Lbol_agn = np.log10(trapz(Lbol_bbb, x=x_Lbol))
+    Lbol_agn = np.log10(scipy.integrate.trapz(Lbol_bbb, x=x_Lbol))
 
 
     #   L_BOL BIG BLUE BUMP (1 micron till 0.1micron)
@@ -429,7 +399,7 @@ def integrate_luminosities(x, M1,M2,M3,M4,Mtot):
     x_Lbol_2limits= 10**(x[indexd])
     OPTUV_BB = M2[indexd]/x_Lbol_2limits
 
-    Loptuv_BB = np.log10(trapz(OPTUV_BB, x=x_Lbol_2limits))
+    Loptuv_BB = np.log10(scipy.integrate.trapz(OPTUV_BB, x=x_Lbol_2limits))
 
     #   L_BOL GALAXY (1 micron till 0.1micron)
 
@@ -442,7 +412,7 @@ def integrate_luminosities(x, M1,M2,M3,M4,Mtot):
 
     OPTUV_GA = M3[indexd]/x_Lbol_2limits
     
-    Loptuv_GA = np.log10(trapz(OPTUV_GA, x=x_Lbol_2limits))
+    Loptuv_GA = np.log10(scipy.integrate.trapz(OPTUV_GA, x=x_Lbol_2limits))
 
 
 
@@ -475,7 +445,7 @@ def integrate_luminosities_deredd( x, M2_deredd):
     x_Lbol = 10**(x[indexc])
     Mtot_Lbol = M2_deredd[indexc]/x_Lbol
 
-    Lbol_agn = np.log10(trapz(Mtot_Lbol, x=x_Lbol))
+    Lbol_agn = np.log10(scipy.integrate.trapz(Mtot_Lbol, x=x_Lbol))
 
     # #   L_BOL BIG BLUE BUMP (1 micron till 0.1micron)
     d = 2.998 * 1e8
@@ -486,7 +456,7 @@ def integrate_luminosities_deredd( x, M2_deredd):
     x_Lbol = 10**(x[indexd])
     OPTUV_BB_deredd = M2_deredd[indexd]/x_Lbol
 
-    Loptuv_BB_deredd = np.log10(trapz(OPTUV_BB_deredd, x=x_Lbol))
+    Loptuv_BB_deredd = np.log10(scipy.integrate.trapz(OPTUV_BB_deredd, x=x_Lbol))
 
     Lbol_agn ="{0:.3f}".format(Lbol_agn)
     Loptuv_BB_deredd ="{0:.3f}".format(Loptuv_BB_deredd)
@@ -504,7 +474,7 @@ def integrate_luminosities_deredd( x, M2_deredd):
 
     OPTUV_GA = M2_deredd[indexd]/x_Lbol_2limits
     
-    Lmir_GA = np.log10(trapz(OPTUV_GA, x=x_Lbol_2limits))
+    Lmir_GA = np.log10(scipy.integrate.trapz(OPTUV_GA, x=x_Lbol_2limits))
 
 
     Lmir_GA ="{0:.3f}".format(Lmir_GA)
@@ -528,7 +498,7 @@ def integrate_luminositires_SFR(x, M1):
     x_Lfir = 10**(x[indexb])
     Mtot_Lfir = M1[indexb]/x_Lfir
 
-    Lfir = np.log10(trapz(Mtot_Lfir, x=x_Lfir))
+    Lfir = np.log10(scipy.integrate.trapz(Mtot_Lfir, x=x_Lfir))
 
     Lfir ="{0:.3f}".format(Lfir)
 
@@ -618,7 +588,7 @@ def stellar_info_array(chain_flat,  catalog, sourceline, Nthin_compute):
 
 
 
-def fluxes_arrays(data_nus, catalog, sourceline, dict_modelsfiles, filterdict, chain, Nrealizations, path, dict_modelfluxes):
+def fluxes_arrays(data, dict_modelsfiles, filterdict, chain, Nrealizations, dict_modelfluxes):
     """
     This function constructs the luminosities arrays for many realizations from the parameter values
 
@@ -642,16 +612,20 @@ def fluxes_arrays(data_nus, catalog, sourceline, dict_modelsfiles, filterdict, c
     all_tau, all_age, all_nh, all_irlum, filename_0_galaxy, filename_0_starburst, filename_0_torus = dict_modelsfiles
     STARBURSTFdict , BBBFdict, GALAXYFdict, TORUSFdict, EBVbbb_array, EBVgal_array = dict_modelfluxes
 
+    data_nus = data.nus
+    catalog = data.catalog
+    sourceline = data.sourceline
+    path = data.path
 
     nsample, npar = chain.shape
-    source = NAME(catalog, sourceline)
+    source = data.name
     tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv0, GAebv0= [ chain[:,i] for i in range(npar)] #calling parameters
     
 
 
 
 
-    z = REDSHIFT(catalog, sourceline)
+    z = data.z
     
     age = 10**agelog
     agelog = np.log10(age)  
@@ -752,7 +726,7 @@ def FLUXES2nuLnu_4plotting(all_nus_rest, FLUXES4plotting, z):
     all_nus_rest = all_nus_rest 
     all_nus_obs = all_nus_rest /(1+z) #observed
     distance= model.z2Dlum(z)
-    lumfactor = (4. * pi * distance**2.)
+    lumfactor = (4. * math.pi * distance**2.)
 
     SBnuLnu, BBnuLnu, GAnuLnu, TOnuLnu, TOTALnuLnu, BBnuLnu_deredd = [ f *lumfactor*all_nus_obs for f in FLUXES4plotting]
 
@@ -771,7 +745,7 @@ def plot_posteriors_triangle_pars(chain, best_fit_par):
 def plot_posteriors_triangle_other_quantities(chain):
 
     figure = triangle.corner(chain, labels=[r"L$_{SB (MIR)}$",r"L$_{BB (OPT-UV)}$",r"L$_{GA (OPT-UV)}$", r"L$_{TO (MIR)}$"],   plot_contours=True, plot_datapoints = False, show_titles=True, quantiles=[0.16, 0.50, 0.84])
-    pl.close(figure)    
+
     return figure
 
 def parameters_with_errors(chain):
@@ -793,9 +767,14 @@ def parameters_with_errors(chain):
 
 
 
-def PLOT_SED_bestfit(source, data_nus_0, ydata_0, yerrors_0,  z, all_nus, FLUXES4plotting, filtered_modelpoints, index_dataexist):
+def PLOT_SED_bestfit(data, all_nus, FLUXES4plotting, filtered_modelpoints, index_dataexist):
 
- 
+    source = data.name
+    data_nus_0= data.nus
+    ydata_0 = data.fluxes
+    yerrors_0 = data.fluxerrs
+    z = data.z
+
     # Choosing only existing data points (source-dependent: not total CATALOG array)
     data_nus = data_nus_0[index_dataexist]
     data_flux = ydata_0[index_dataexist]
@@ -808,7 +787,7 @@ def PLOT_SED_bestfit(source, data_nus_0, ydata_0, yerrors_0,  z, all_nus, FLUXES
     all_nus_rest = 10**all_nus
     all_nus_obs = 10**all_nus/(1+z) #observed 
     distance= model.z2Dlum(z)
-    lumfactor = (4. * pi * distance**2.)
+    lumfactor = (4. * math.pi * distance**2.)
 
 
     data_nuLnu_rest = data_flux* data_nus_obs *lumfactor
@@ -832,7 +811,7 @@ def PLOT_SED_bestfit(source, data_nus_0, ydata_0, yerrors_0,  z, all_nus, FLUXES
     p3=ax1.plot(all_nus, BBnuLnu, marker="None", linewidth=lw, label="1 /sigma",color= BBcolor, alpha = 0.6)
     p4=ax1.plot( all_nus, GAnuLnu,marker="None", linewidth=lw, label="1 /sigma",color=GAcolor, alpha = 0.6)
     p5=ax1.plot( all_nus, TOnuLnu, marker="None",  linewidth=lw, label="1 /sigma",color= TOcolor, alpha = 0.6)
-    interp_total= interp1d(all_nus, TOTALnuLnu, bounds_error=False, fill_value=0.)
+    interp_total= scipy.interpolate.interp1d(all_nus, TOTALnuLnu, bounds_error=False, fill_value=0.)
     TOTALnuLnu_at_datapoints = interp_total(data_nus)
 
     
@@ -848,9 +827,13 @@ def PLOT_SED_bestfit(source, data_nus_0, ydata_0, yerrors_0,  z, all_nus, FLUXES
     print ' => Best fit SED was plotted.'
     return fig
 
-def PLOT_SED_manyrealizations(source, data_nus_0, ydata_0, yerror_0, z, all_nus, FLUXES4plotting, Nrealizations, filtered_modelpoints, index_dataexist):
+def PLOT_SED_manyrealizations(data, all_nus, FLUXES4plotting, Nrealizations, filtered_modelpoints, index_dataexist):
 
-
+    source = data.name
+    data_nus_0= data.nus
+    ydata_0 = data.fluxes
+    yerror_0 = data.fluxerrs
+    z = data.z
     # Choosing only existing data points (source-dependent: not total CATALOG array)
  
     data_nus = data_nus_0[index_dataexist]
@@ -866,7 +849,7 @@ def PLOT_SED_manyrealizations(source, data_nus_0, ydata_0, yerror_0, z, all_nus,
     all_nus_rest = 10**all_nus 
     all_nus_obs =  10**all_nus / (1+z) #observed
     distance= model.z2Dlum(z)
-    lumfactor = (4. * pi * distance**2.)
+    lumfactor = (4. * math.pi * distance**2.)
     data_nuLnu_rest = ydata* data_nus_obs *lumfactor
     data_errors_rest= yerror * data_nus_obs * lumfactor
 
@@ -891,7 +874,7 @@ def PLOT_SED_manyrealizations(source, data_nus_0, ydata_0, yerror_0, z, all_nus,
         p5=ax1.plot( all_nus, TOnuLnu[i], marker="None",  linewidth=lw, label="1 /sigma",color= TOcolor ,alpha = 0.5)
         p1= ax1.plot( all_nus, TOTALnuLnu[i], marker="None", linewidth=lw,  label="1 /sigma", color= TOTALcolor, alpha= 0.5)
 
-        interp_total= interp1d(all_nus, TOTALnuLnu[i], bounds_error=False, fill_value=0.)
+        interp_total= scipy.interpolate.interp1d(all_nus, TOTALnuLnu[i], bounds_error=False, fill_value=0.)
 
         TOTALnuLnu_at_datapoints = interp_total(data_nus)
 
@@ -936,9 +919,9 @@ def SED_plotting_settings(x, ydata):
     ax2.plot(x2, np.ones(len(x2)), alpha=0)
 
 #-- Latex -------------------------------------------------
-    rc('text', usetex=True)
-    rc('font', family='serif')
-    rc('axes', linewidth=2)
+    matplotlib.rc('text', usetex=True)
+    matplotlib.rc('font', family='serif')
+    matplotlib.rc('axes', linewidth=2)
 #-------------------------------------------------------------
 
 #    ax1.set_title(r"\textbf{SED of Type 2}" + r"\textbf{ AGN }"+ "Source Nr. "+ source + "\n . \n . \n ." , fontsize=17, color='k')    

@@ -25,7 +25,8 @@ import time
 import numpy as np
 from multiprocessing import Pool
 import PARAMETERSPACE_AGNfitter as parspace
-import DATA_AGNfitter as data
+#import DATA_AGNfitter as data
+from DATANEW_AGNfitter import DATA
 from GENERAL_AGNfitter import saveobj
 
 
@@ -50,22 +51,18 @@ def run_burn_in(sampler, opt, p0, catalog, sourceline, sourcename, folder, setnr
     
     print 'Saving results to '+folder+str(sourcename)+'/samples_burn1-2-3.sav'
     
-    save_samples1(folder+str(sourcename)+'/samples_burn1-2-3.sav', sampler, pos, lnprob, state)
+    save_chains(folder+str(sourcename)+'/samples_burn1-2-3.sav', sampler, pos, state)
 
     return pos, state   
 
 
 
-def save_samples1(filename, sampler, pos, lnprob, state):
-    saveobj(filename, dict(
+def save_chains(filename, sampler, pos, state):
+    f = open(filename, 'wb')
+    pickle.dump(dict(
         chain=sampler.chain, accept=sampler.acceptance_fraction,
-        lnprob=sampler.lnprobability, final_pos=pos, state=state), overwrite=1)
-
-def save_samples2(filename, sampler, pos, state):
-    saveobj(filename, dict(
-        chain=sampler.chain, accept=sampler.acceptance_fraction,
-        lnprob=sampler.lnprobability, final_pos=pos, state=state), overwrite=1)
-
+        lnprob=sampler.lnprobability, final_pos=pos, state=state, acor=acor2), fh, protocol=2)
+    fh.close()
 
 #==================================================
 # MCMC SAMPLING FUNCTIONS
@@ -88,7 +85,7 @@ def run_mcmc(sampler, pburn, catalog, sourceline, sourcename, folder, opt):
 
     print 'Saving results to samples_mcmc.sav'
 
-    save_samples2(folder+str(source1)+'/samples_mcmc.sav', sampler, pos, state)	
+    save_chains(folder+str(source1)+'/samples_mcmc.sav', sampler, pos, state)	
 
 
 
@@ -97,13 +94,19 @@ def run_mcmc(sampler, pburn, catalog, sourceline, sourcename, folder, opt):
 #============================================
 
 
-def main(catalog, sourceline, P, folder, dict_modelsfiles, dict_modelfluxes, opt):
+def main(data, P, dict_modelsfiles, dict_modelfluxes, opt):
 
-    x, ydata, ysigma = data.DATA(catalog, sourceline)
-#    x, ydata, ysigma = data.MOCKdata(catalog, sourceline,2, dict_modelfluxes,path)
+    x = data.nus
+    ydata = data.fluxes
+    ysigma= data.fluxerrs
     
-    sourcename = data.NAME(catalog, sourceline)
-    z = data.REDSHIFT(catalog, sourceline)
+    folder = data.output_folder
+    sourceline = data.sourceline
+    catalog = data.catalog
+    sourcename = data.name
+    z = data.z
+
+
     path = os.path.abspath(__file__).rsplit('/', 1)[0]
 
     print 'model parameters', P.names

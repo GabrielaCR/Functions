@@ -26,16 +26,27 @@ from astropy.io import fits
 
 class DATA:
 
+	"""
+	Class DATA
+	input: catalogname, sourceline
+	bugs: Not ready to read FITS yet.
+
+	"""
+
 	def __init__(self, cat, sourceline):
 		self.cat = cat
 		self.sourceline = sourceline
+		self.catalog = cat['filename']
+		self.path = cat['path']
+		self.dict_path = cat['dict_path']
+		self.output_folder = cat['output_folder']
 
-	def DATA(self):
+	def PROPS(self):
 
 
 		if self.cat['filetype'] == 'ASCII': 
 
-			data = open(self.cat['filename'], 'r') 
+			data = open(self.catalog, 'r') 
 			header = data.readline()
 			for i in range(0, self.sourceline):
 				header = data.readline()
