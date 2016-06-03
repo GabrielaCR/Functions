@@ -19,15 +19,16 @@ import numpy as np
 import triangle
 import time
 import scipy
+from astropy import units as u
 
-import GENERAL_AGNfitter as general
+import GENERAL_AGNfitter as general #STILL NEED TO GET RID OF THIS
 import MODEL_AGNfitter as model
 import DICTIONARIES_AGNfitter as dicts
 import PARAMETERSPACE_AGNfitter as parspace
 
 
 
-def main(filename, data, P, opt, dict_modelsfiles, filterdict, dict_modelfluxes):
+def main(filename, data, P, out, dict_modelsfiles, filterdict, dict_modelfluxes):
 
     """
     input: 
@@ -60,40 +61,43 @@ def main(filename, data, P, opt, dict_modelsfiles, filterdict, dict_modelfluxes)
         print 'Error: The MCMC sampling has not been perfomed yet, or the chains were not saved properly.'
 
 #==============================================
+    f = open(self.outputfilename, 'rb')
+    samples = pickle.load(f)
+    f.close()
 
-    samples = general.loadobj(filename)
     nwalkers, nsamples, npar = samples['chain'].shape
     mean_accept =  samples['accept'].mean()
     print 'Mean acceptance fraction', mean_accept
-
+    mean_autocorr = samples['acor'].mean()
+    print 'Mean autocorrelation time', mean_autocorr
 #===================MCMC===================== 
 
-    if opt['plottraces_burn-in'] :   
+    if out['plot_tracesburn-in'] :   
 
       if filename.startswith(folder+str(sourcename)+'/samples_burn1-2-3'):
-        if opt['plottraces_burn-in'] :    
+        if out['plot_tracesburn-in'] :    
             print 'Plotting traces of burn-in'
             fig, nwplot = plot_trace_burnin123(P, samples['chain'], samples['lnprob'])
             fig.suptitle('Chain traces for %i steps of %i walkers' % (nwplot,nwalkers))
-            fig.savefig(folder+str(sourcename)+'/traces1-2-3.' +  opt['plotformat'])
+            fig.savefig(folder+str(sourcename)+'/traces1-2-3.' +  out['plotformat'])
             plt.close(fig)  
       else: 
         print 'Burn-in phase has not finished or not saved in samples_burn1-2-3.sav '
 
-    if opt['plotautocorr'] :
+    if out['plot_autocorr'] :
      
         fig, axes = general.plot_autocorr(samples['chain'], P)
         fig.suptitle('Autocorrelation for %i walkers with %i samples. '
                     '(Mean acceptance fraction %.2f)' %
                     (nwalkers, nsamples, mean_accept), fontsize=14)
-        fig.savefig(folder+str(sourcename)+'/autocorr1-2-3.' +  opt['plotformat'])
+        fig.savefig(folder+str(sourcename)+'/autocorr1-2-3.' +  out['plotformat'])
 
 #===================MCMC===================== 
 
     if filename.startswith(data.output_folder+str(data.name)+'/samples_mcmc'):
 
         #Thinning
-        Ns, Nt = opt['Nsample'], opt['Nthinning']
+        Ns, Nt = out['Nsample'], out['Nthinning']
 
         assert Ns * Nt <= nsamples 
 
@@ -109,9 +113,9 @@ def main(filename, data, P, opt, dict_modelsfiles, filterdict, dict_modelfluxes)
         best_fit_par = chain_flat[isort[0]]
         total_length_chain = int(len(chain_flat))
 
-        Nthin_compute = opt['realizations2compute'] #thinning chain to compute small
+        Nthin_compute = out['realizations2int'] #thinning chain to compute small
                                                 #number of luminosities
-        Nrealizations = opt['realizations2plot'] #thinning it even more
+        Nrealizations = out['realizations2plot'] #thinning it even more
                                                  #for doing fewer superposed plots
     
 
@@ -120,7 +124,7 @@ def main(filename, data, P, opt, dict_modelsfiles, filterdict, dict_modelfluxes)
 #===================WRITING====================
 
 
-        if opt['printpar_maxlikelihood']:
+        if out['writepar_maxlikelihood']:
             print 'Printing parameters of maximum likelihood'
             distance = model.z2Dlum(z)
             Mstar, SFR, SFR_file = model.stellar_info_best(best_fit_par, catalog, sourceline)
@@ -131,18 +135,18 @@ def main(filename, data, P, opt, dict_modelsfiles, filterdict, dict_modelfluxes)
 
     #=================PLOT_TRACES===================
 
-        if opt['plottraces_mcmc'] : 
+        if out['plot_tracesmcmc'] : 
 
             print 'Plotting traces of mcmc'
             fig, nwplot = plot_trace_mcmc(P, samples['chain'],samples['lnprob'])
             fig.suptitle('Chain traces for %i of %i walkers. Main acceptance fraction: %f' % (nwplot,nwalkers,mean_accept))
-            fig.savefig(folder+str(sourcename)+'/traces_mcmc.' + opt['plotformat'])
+            fig.savefig(folder+str(sourcename)+'/traces_mcmc.' + out['plotformat'])
             plt.close(fig)
 
     #===============INTEGRATE LUMINOSITIES=================
 
 
-        if opt['integratedlum']:
+        if out['calc_intlum']:
             print 'Computing integrated luminosities Loptuv_GA, LMir_TO, LMir_SB, Loptuv_BB, LFir_8-1000'
             #print 'Saving in: ', folder + str(sourcename)+'/integrated_luminosities_'+str(sourcename)+'.txt'
             L0, L1, L2, L3, L4 , L5=integrated_luminosities_arrays(all_nus, FLUXES4plotting, Nthin_compute, total_length_chain, z, folder, sourcename)
@@ -150,14 +154,14 @@ def main(filename, data, P, opt, dict_modelsfiles, filterdict, dict_modelfluxes)
 
     #==================PLOT PDF TRIANGLE=================
 
-        if opt['posteriortriangle']:
+        if out['plot_posteriortriangle']:
             print 'Plotting triangle of PDFs of parameters.'
             figure = plot_posteriors_triangle_pars(chain_flat, best_fit_par)
-            figure.savefig(folder+str(sourcename)+'/posterior_triangle_pars_'+str(sourcename)+'.' + opt['plotformat'])
+            figure.savefig(folder+str(sourcename)+'/posterior_triangle_pars_'+str(sourcename)+'.' + out['plotformat'])
             plt.close(figure)
 
-    ### change this opt to opt['posteriortriangleofluminosities]
-        if opt['posteriortrianglewithluminosities'] :
+    ### change this out to out['posteriortriangleofluminosities]
+        if out['plot_posteriortrianglewithluminosities'] :
 
             if not os.path.lexists(folder+str(sourcename)+'/integrated_luminosities_'+str(sourcename)+'.txt'):
                 L0, L1, L2, L3, L4, L5 =integrated_luminosities_arrays(all_nus, FLUXES4plotting, Nthin_compute, total_length_chain ,z, folder, sourcename)
@@ -167,15 +171,15 @@ def main(filename, data, P, opt, dict_modelsfiles, filterdict, dict_modelfluxes)
             chain_luminosities = np.column_stack((L0, L1, L2, L3, L4, L5))  
 
             figure2= plot_posteriors_triangle_other_quantities(chain_others)
-            figure2.savefig(folder+str(sourcename)+'/posterior_triangle_others_'+str(sourcename)+'.'+ opt['plotformat'])
+            figure2.savefig(folder+str(sourcename)+'/posterior_triangle_others_'+str(sourcename)+'.'+ out['plotformat'])
             plt.close(figure2)   
 
 
     #-==========PRINT PARAMETERS WITH UNCERTAINTIES=============
 
-        if opt['printpar_meanwitherrors']:
+        if out['writepar_meanwitherrors']:
 
-            if not opt['integratedlum']:
+            if not out['calc_intlum']:
                 L0, L1, L2, L3, L4, L5 =integrated_luminosities_arrays(all_nus, FLUXES4plotting, Nthin_compute, total_length_chain ,z, folder, sourcename)
                     
             print 'Printing mean values of the parameters with corresponding errors.'
@@ -192,7 +196,7 @@ def main(filename, data, P, opt, dict_modelsfiles, filterdict, dict_modelfluxes)
             np.savetxt(folder + str(sourcename)+'/parameters_with_errors_3_'+str(sourcename)+'.txt' , output_error, delimiter = " ",fmt="%1.4f" ,header="tau_e, age_e, nh_e, irlum_e, SB_e, BB_e, GA_e, TO_e, BBebv_e, GAebv_e, Mstar_e, SFR_e, SFR_file_e, L_sb, L_bbb, L_ga, L_to, Lbb_dered, Lfir_SFR ,SFR_IR_e")
 
 
-        if opt['printpar_maxlikelihood']:
+        if out['writepar_maxlikelihood']:
             print 'Printing parameters of maximum likelihood'
             distance = model.z2Dlum(z)
             Mstar, SFR, SFR_file = model.stellar_info_best(best_fit_par, catalog, sourceline)
@@ -213,20 +217,18 @@ def main(filename, data, P, opt, dict_modelsfiles, filterdict, dict_modelfluxes)
 
         #===================PLOT SEDS=======================
 
-        if opt['plotSEDbest']:
+        if out['plotSEDbest']:
 
             fig = PLOT_SED_bestfit(data, all_nus, FLUXES4plotting, filtered_modelpoints, index_dataexist)
             plt.savefig(folder+str(sourcename)+'/SED_best_'+str(sourcename)+'.pdf', format = 'pdf')
             plt.close(fig)
 
-        if opt['plotSEDrealizations']:
+        if out['plotSEDrealizations']:
 
             fig = PLOT_SED_manyrealizations(data, all_nus, FLUXES4plotting, Nrealizations, filtered_modelpoints, index_dataexist)
             plt.savefig(folder+str(sourcename)+'/SED_realizations_'+str(sourcename)+'.pdf', format = 'pdf')
             plt.close(fig)
 
-
-    print '************ =) ***********'
 
 
 
@@ -247,8 +249,6 @@ def plot_trace_mcmc(P, chain, lnprob, nwplot=50):
 #-------------------------------------------------------------
 
     nwalkers, nsample, npar = chain.shape
-
-#    nrows, ncols = general.get_nrows_ncols(npar+1)
     nrows = npar+1
     ncols =1         
     
@@ -617,10 +617,9 @@ def fluxes_arrays(data, dict_modelsfiles, filterdict, chain, Nrealizations, dict
     sourceline = data.sourceline
     path = data.path
 
-    nsample, npar = chain.shape
+    nsample, npar = chain.shape#C
     source = data.name
-    tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv0, GAebv0= [ chain[:,i] for i in range(npar)] #calling parameters
-    
+    tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv0, GAebv0= [ chain[:,i] for i in range(npar)] #C
 
 
 
@@ -673,7 +672,6 @@ def fluxes_arrays(data, dict_modelsfiles, filterdict, chain, Nrealizations, dict
         if len(all_gal_nus)==len(all_sb_nus) and len(all_sb_nus)==len(all_bbb_nus) and len(all_tor_nus)==len(all_bbb_nus) :
             nu= all_gal_nus
 
-            NormalizationFLux = 1e-28 # This is the flux to which the models are normalized to  have comparable NORM factors
             all_sb_Fnus_norm = all_sb_Fnus /1e20#/1e50
             all_bbb_Fnus_norm = all_bbb_Fnus /1e60#/ 1e90
             all_bbb_Fnus_deredd_norm = all_bbb_Fnus_deredd /1e60#/ 1e90
@@ -711,9 +709,6 @@ def fluxes_arrays(data, dict_modelsfiles, filterdict, chain, Nrealizations, dict
     
 
     FLUXES4plotting = (SBFnu_array, BBFnu_array, GAFnu_array, TOFnu_array, TOTALFnu_array,BBFnu_array_deredd)
-
-    
-
 
     return all_model_nus, FLUXES4plotting, filtered_modelpoints
 

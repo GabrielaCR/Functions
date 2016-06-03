@@ -23,11 +23,10 @@ import emcee
 import sys,os
 import time
 import numpy as np
+import pickle
 from multiprocessing import Pool
 import PARAMETERSPACE_AGNfitter as parspace
-#import DATA_AGNfitter as data
 from DATANEW_AGNfitter import DATA
-from GENERAL_AGNfitter import saveobj
 
 
 
@@ -36,15 +35,15 @@ from GENERAL_AGNfitter import saveobj
 #==================================================
 
 
-def run_burn_in(sampler, opt, p0, catalog, sourceline, sourcename, folder, setnr):
+def run_burn_in(sampler, mc, p0, catalog, sourceline, sourcename, folder, setnr):
     """ Run and save a set of burn-in iterations."""
 
-    print 'Running burn-in nr. '+ str(setnr)+' with %i steps' % opt['Nburn1']
+    print 'Running burn-in nr. '+ str(setnr)+' with %i steps' % mc['Nburn1']
     
-    iprint = opt['iprint']
+    iprint = mc['iprint']
 
     # note the results are saved in the sampler object.
-    for i,(pos, lnprob, state) in enumerate(sampler.sample(p0, iterations=opt['Nburn1'])):
+    for i,(pos, lnprob, state) in enumerate(sampler.sample(p0, iterations=mc['Nburn1'])):
         i += 1
         if not i % iprint:
             print i
@@ -61,24 +60,24 @@ def save_chains(filename, sampler, pos, state):
     f = open(filename, 'wb')
     pickle.dump(dict(
         chain=sampler.chain, accept=sampler.acceptance_fraction,
-        lnprob=sampler.lnprobability, final_pos=pos, state=state, acor=acor2), fh, protocol=2)
-    fh.close()
+        lnprob=sampler.lnprobability, final_pos=pos, state=state, acor=sampler.acor), f, protocol=2)
+    f.close()
 
 #==================================================
 # MCMC SAMPLING FUNCTIONS
 #==================================================
 
 
-def run_mcmc(sampler, pburn, catalog, sourceline, sourcename, folder, opt):
+def run_mcmc(sampler, pburn, catalog, sourceline, sourcename, folder, mc):
 	
 
     source1=sourcename
     sampler.reset()
 
-    iprint = opt['iprint']
-    print "Running MCMC with %i steps" % opt['Nmcmc']
+    iprint = mc['iprint']
+    print "Running MCMC with %i steps" % mc['Nmcmc']
 
-    for i,(pos, lnprob, state) in enumerate(sampler.sample(pburn, iterations=opt['Nmcmc'])):	
+    for i,(pos, lnprob, state) in enumerate(sampler.sample(pburn, iterations=mc['Nmcmc'])):	
         i += 1
         if not i % iprint:
             print i
@@ -94,7 +93,7 @@ def run_mcmc(sampler, pburn, catalog, sourceline, sourcename, folder, opt):
 #============================================
 
 
-def main(data, P, dict_modelsfiles, dict_modelfluxes, opt):
+def main(data, P, dict_modelsfiles, dict_modelfluxes, mc):
 
     x = data.nus
     ydata = data.fluxes
@@ -109,43 +108,43 @@ def main(data, P, dict_modelsfiles, dict_modelfluxes, opt):
 
     path = os.path.abspath(__file__).rsplit('/', 1)[0]
 
+    print '......................................................'
     print 'model parameters', P.names
     print 'minimum values', P.min
     print 'maximum values', P.max
-
-    print opt['Nthreads'], 'threads'
-    print opt['Nwalkers'], 'walkers'
+    print '......................................................'
+    print mc['Nwalkers'], 'walkers'
 
     Npar = len(P.names)
 
     sampler = emcee.EnsembleSampler(
-        opt['Nwalkers'], Npar, parspace.ln_probab,
-        args=[x, ydata, ysigma, z, dict_modelsfiles, dict_modelfluxes,  P],  threads=opt['Nthreads'], daemon= True)
+        mc['Nwalkers'], Npar, parspace.ln_probab,
+        args=[x, ydata, ysigma, z, dict_modelsfiles, dict_modelfluxes,  P],  daemon= True)
 
 # Burn-in process: Just the last point visited here is relevant. Chains are discarted
 
-    if opt['Nburn'] > 0:
+    if mc['Nburn'] > 0:
 
         t1 = time.time()
         if not os.path.lexists(folder+str(sourcename)):
             os.mkdir(folder+str(sourcename))
 
-        p_maxlike = parspace.get_initial_positions(opt['Nwalkers'], P)
-        Nr_BurnIns = opt['Nburnsets']  
+        p_maxlike = parspace.get_initial_positions(mc['Nwalkers'], P)
+        Nr_BurnIns = mc['Nburnsets']  
 
         for i in range(Nr_BurnIns):
 
-            p_maxlike, state = run_burn_in(sampler, opt, p_maxlike, catalog, sourceline, sourcename,folder, i)
+            p_maxlike, state = run_burn_in(sampler, mc, p_maxlike, catalog, sourceline, sourcename,folder, i)
             savedfile = folder+str(sourcename)+'/samples_burn1-2-3.sav'
-            p_maxlike = parspace.get_best_position(savedfile, opt['Nwalkers'], P)
+            p_maxlike = parspace.get_best_position(savedfile, mc['Nwalkers'], P)
 
         print '%.2g min elapsed' % ((time.time() - t1)/60.)
 
 
-    if opt['Nmcmc'] > 0:
+    if mc['Nmcmc'] > 0:
 
         t2 = time.time()
-        run_mcmc(sampler, p_maxlike, catalog, sourceline, sourcename,folder, opt)
+        run_mcmc(sampler, p_maxlike, catalog, sourceline, sourcename,folder, mc)
         print '%.2g min elapsed' % ((time.time() - t2)/60.)
 
     del sampler.pool    
