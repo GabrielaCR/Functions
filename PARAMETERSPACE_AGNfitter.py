@@ -274,25 +274,6 @@ def get_best_position(filename, nwalkers, P):
   return p1
 
 
-  
-def get_best_position_PT(ntemps, filename, nwalkers, P):
-
-  Npar = len(P.names) 
-  #all saved vectors  
-  samples = loadobj(filename)
-  #index for the largest likelihood   
-  i = samples['lnprob'].ravel().argmax()
-  #the values for the parameters at this index
-  P.ml= samples['chain'].reshape(-1, Npar)[i]
-
-  p1 = np.random.normal(size=(ntemps,nwalkers, Npar)) 
-
-  for i in range(Npar):
-    p = P.ml[i]
-    print i, P.names
-    p1[:, :, i] =  p + 0.00001 * p1[:,:, i]
-
-  return p1
 
 
 def get_best_position_4mcmc(filename, nwalkers, P):

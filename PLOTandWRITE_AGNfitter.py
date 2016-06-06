@@ -28,7 +28,7 @@ import PARAMETERSPACE_AGNfitter as parspace
 
 
 
-def main(filename, data, P, out, dict_modelsfiles, filterdict, dict_modelfluxes):
+def main(fileending, data, P, out):
 
     """
     input: 
@@ -45,9 +45,13 @@ def main(filename, data, P, out, dict_modelsfiles, filterdict, dict_modelfluxes)
     sourceline = data.sourceline
     catalog = data.catalog
     sourcename = data.name
+    dict_modelsfiles =data.dict_modelsfiles
+    filterdict=data.filterdict
+    dict_modelfluxes= data.dict_modelsfiles
     z = data.z 
-    path_AGNfitter = data.path
 
+    path_AGNfitter = data.path
+    filename = data.output_folder+str(data.name)+ fileending
 
 
  
@@ -83,14 +87,6 @@ def main(filename, data, P, out, dict_modelsfiles, filterdict, dict_modelfluxes)
             plt.close(fig)  
       else: 
         print 'Burn-in phase has not finished or not saved in samples_burn1-2-3.sav '
-
-    if out['plot_autocorr'] :
-     
-        fig, axes = general.plot_autocorr(samples['chain'], P)
-        fig.suptitle('Autocorrelation for %i walkers with %i samples. '
-                    '(Mean acceptance fraction %.2f)' %
-                    (nwalkers, nsamples, mean_accept), fontsize=14)
-        fig.savefig(folder+str(sourcename)+'/autocorr1-2-3.' +  out['plotformat'])
 
 #===================MCMC===================== 
 

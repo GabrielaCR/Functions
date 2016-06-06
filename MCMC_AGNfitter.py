@@ -93,7 +93,7 @@ def run_mcmc(sampler, pburn, catalog, sourceline, sourcename, folder, mc):
 #============================================
 
 
-def main(data, P, dict_modelsfiles, dict_modelfluxes, mc):
+def main(data, P, mc):
 
     x = data.nus
     ydata = data.fluxes
@@ -103,6 +103,8 @@ def main(data, P, dict_modelsfiles, dict_modelfluxes, mc):
     sourceline = data.sourceline
     catalog = data.catalog
     sourcename = data.name
+    dict_modelsfiles =data.dict_modelfile
+    dict_modelfluxes =data.dict_modelfluxes
     z = data.z
 
 

@@ -21,6 +21,7 @@ from math import exp,log,pi
 import numpy as np
 import triangle
 import time
+import pickle
 from scipy.interpolate import interp1d
 from scipy.integrate import simps, trapz, romberg
 from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, DrawingArea, HPacker

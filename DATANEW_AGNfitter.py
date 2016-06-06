@@ -23,6 +23,10 @@ from astropy import constants as const
 from astropy import units as u
 from astropy.table import Table
 from astropy.io import fits
+import shelve
+from functions.GENERAL_AGNfitter import NearestNeighbourSimple1D
+import functions.DICTIONARIES_AGNfitter as dicts
+
 
 class DATA:
 
@@ -104,4 +108,21 @@ class DATA:
 		self.fluxes = fluxes[nus.argsort()]
 		self.fluxerrs = fluxerrs[nus.argsort()]
 		self.ndflag = ndflag_cat[nus.argsort()]
+
+
+	def DICTS(self, mc):
+
+		self.PROPS()
+
+		COSMOS_modelsdict = shelve.open(self.dict_path)
+		z_array_in_dict = np.arange(0.1,4.1,0.05)             
+		z_key= str( z_array_in_dict[NearestNeighbourSimple1D( self.z, z_array_in_dict , 1)]   )
+
+
+		COSMOS_modelsdict = shelve.open(self.dict_path)
+		self.dict_modelsfiles = dicts.arrays_of_modelparsandfiles(self.path)
+		self.filterdict = dicts.filter_dictionaries(mc['Bandset'], self.path)           
+		self.dict_modelfluxes = COSMOS_modelsdict[z_key]
+		COSMOS_modelsdict.close
+
 
