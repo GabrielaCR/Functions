@@ -20,19 +20,14 @@ It contains:
 from __future__ import division
 import pylab as pl
 import numpy as np
-from math import exp,log,pi
-from collections import defaultdict
-from scipy.interpolate import interp1d
-from scipy.integrate import simps, trapz, romberg
+from math import pi
 import time
-
-from DATA_AGNfitter import DATA, NAME, DISTANCE, REDSHIFT
+import pickle
 import MODEL_AGNfitter as model
-from GENERAL_AGNfitter import adict, writetxt, loadobj
 
 
 
-def Pdict (catalog, sourceline):
+def Pdict (data):
 
     """
     Constructs a dictionary P with keys. The value of every key is a tuple with the
@@ -51,13 +46,12 @@ def Pdict (catalog, sourceline):
 
     """
     P = adict()
-    z = REDSHIFT(catalog, sourceline)
 
     # ----------------------------|--------------|--------------|---------------|-----------|-----------|------------|-----------|------------|-------------|------------|
-    P.names =   'tau' ,     'age',  'nh', 'irlum' ,  'SB',   'BB',   'GA',   'TO',  'BBebv',   'GAebv'
+    P.names =   r'$\tau$' ,     'age',  r'N$_{\rm H}$', 'irlum' ,  'SB',   'BB',   'GA',   'TO',  r'E(B-V)$_{bbb}$',    r'E(B-V)$_{gal}$'
     # -------------------------|-------------|-------------|---------------|-----------|-----------|------------|-----------|------------|-------------|------------| For F_nu
     P.min =      0 ,    6,   21,    7,      0,      0,        0,     0,      0,       0.
-    P.max =      3.5,   np.log10(model.maximal_age(z)),   25,   15,     10,     1,    10,     10,     0.1,       1.5
+    P.max =      3.5,   np.log10(model.maximal_age(data.z)),   25,   15,     10,     1,    10,     10,     0.1,       1.5
     # -------------------------|-------------|-------------|-----------|-----------|------------|-----------|------------|-------------|------------|
 
     Npar = len(P.names)
@@ -258,7 +252,10 @@ def get_best_position(filename, nwalkers, P):
   """
   Npar = len(P.names) 
   #all saved vectors  
-  samples = loadobj(filename)
+  f = open(filename, 'rb')
+  samples = pickle.load(f)
+  f.close()
+
   #index for the largest likelihood   
   i = samples['lnprob'].ravel().argmax()
   #the values for the parameters at this index
@@ -278,9 +275,11 @@ def get_best_position(filename, nwalkers, P):
 
 def get_best_position_4mcmc(filename, nwalkers, P):
   Npar = len(P.names) 
-  #all saved vectors  
-  samples = loadobj(filename)
-  #index for the largest likelihood   
+
+  f = open(filename, 'rb')
+  samples = pickle.load(f)
+  f.close()
+
   i = samples['lnprob'].ravel().argmax()
   #the values for the parameters at this index
   P.ml= samples['chain'].reshape(-1, Npar)[i]
@@ -351,3 +350,52 @@ def galaxy_flux(dict_modelsfiles, dict_modelfluxes, *par):
   gal_flux = 10**(GA)*gal_Fnu_norm
 
   return bands, gal_flux
+
+
+
+class adict(dict):
+
+    """ A dictionary with attribute-style access. It maps attribute
+    access to the real dictionary.
+    Class is part of Barak package by Neil Chrighton)
+    """
+
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+
+    # the following two methods allow pickling
+    def __getstate__(self):
+        """Prepare a state of pickling."""
+        return self.__dict__.items()
+
+    def __setstate__(self, items):
+        """ Unpickle. """
+        for key, val in items:
+            self.__dict__[key] = val
+
+    def __setitem__(self, key, value):
+        return super(adict, self).__setitem__(key, value)
+
+    def __getitem__(self, name):
+        return super(adict, self).__getitem__(name)
+
+    def __delitem__(self, name):
+        return super(adict, self).__delitem__(name)
+
+    def __setattr__(self, key, value):
+        if hasattr(self, key):
+            # make sure existing methods are not overwritten by new
+            # keys.
+            return super(adict, self).__setattr__(key, value)
+        else:
+            return super(adict, self).__setitem__(key, value)
+
+    __getattr__ = __getitem__
+
+    def copy(self):
+        """ Return a copy of the attribute dictionary.
+
+        Does not perform a deep copy
+        """
+        return adict(self)
+

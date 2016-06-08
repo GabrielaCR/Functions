@@ -314,26 +314,26 @@ def writetxt(fh, cols, sep=' ', names=None, header=None, overwrite=False,
     fh.close()
     return
 
-def loadobj(filename):
-    """ Load a python object pickled with saveobj."""
-    if filename.endswith('.gz'):
-        fh = gzip.open(filename, 'rb')
-    else:
-        fh = open(filename, 'rb')
-    obj = pickle.load(fh)
-    fh.close()
-    return obj
+# def loadobj(filename):
+#     """ Load a python object pickled with saveobj."""
+#     if filename.endswith('.gz'):
+#         fh = gzip.open(filename, 'rb')
+#     else:
+#         fh = open(filename, 'rb')
+#     obj = pickle.load(fh)
+#     fh.close()
+#     return obj
 
-def saveobj(filename, obj, overwrite=False):
-    """ Save a python object to filename using pickle."""
-    if os.path.lexists(filename) and not overwrite:
-        raise IOError('%s exists' % filename)
-    if filename.endswith('.gz'):
-        fh = gzip.open(filename, 'wb')
-    else:
-        fh = open(filename, 'wb')
-    pickle.dump(obj, fh, protocol=2)
-    fh.close()
+# def saveobj(filename, obj, overwrite=False):
+#     """ Save a python object to filename using pickle."""
+#     if os.path.lexists(filename) and not overwrite:
+#         raise IOError('%s exists' % filename)
+#     if filename.endswith('.gz'):
+#         fh = gzip.open(filename, 'wb')
+#     else:
+#         fh = open(filename, 'wb')
+#     pickle.dump(obj, fh, protocol=2)
+#     fh.close()
 
 
 

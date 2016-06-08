@@ -18,6 +18,7 @@ import math
 import numpy as np
 import triangle
 import time
+import pickle
 import scipy
 from astropy import units as u
 
@@ -47,7 +48,7 @@ def main(fileending, data, P, out):
     sourcename = data.name
     dict_modelsfiles =data.dict_modelsfiles
     filterdict=data.filterdict
-    dict_modelfluxes= data.dict_modelsfiles
+    dict_modelfluxes= data.dict_modelfluxes
     z = data.z 
 
     path_AGNfitter = data.path
@@ -65,7 +66,7 @@ def main(fileending, data, P, out):
         print 'Error: The MCMC sampling has not been perfomed yet, or the chains were not saved properly.'
 
 #==============================================
-    f = open(self.outputfilename, 'rb')
+    f = open(folder+str(sourcename)+'/samples_mcmc.sav', 'rb')
     samples = pickle.load(f)
     f.close()
 
@@ -606,6 +607,7 @@ def fluxes_arrays(data, dict_modelsfiles, filterdict, chain, Nrealizations, dict
     filtered_modelpoints_list = []
 
     all_tau, all_age, all_nh, all_irlum, filename_0_galaxy, filename_0_starburst, filename_0_torus = dict_modelsfiles
+
     STARBURSTFdict , BBBFdict, GALAXYFdict, TORUSFdict, EBVbbb_array, EBVgal_array = dict_modelfluxes
 
     data_nus = data.nus
@@ -613,7 +615,7 @@ def fluxes_arrays(data, dict_modelsfiles, filterdict, chain, Nrealizations, dict
     sourceline = data.sourceline
     path = data.path
 
-    nsample, npar = chain.shape#C
+    nsample, npar = chain.shape
     source = data.name
     tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv0, GAebv0= [ chain[:,i] for i in range(npar)] #C
 

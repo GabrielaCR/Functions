@@ -65,11 +65,12 @@ class DATA:
 			freq_wl_cat = [column[c] * self.cat['freq/wl_unit'] for c in self.cat['freq/wl_list']]
 
 			## If columns with flags exist
-			if self.cat['ndflag_bool'] == 'yes': 
+			if self.cat['ndflag_bool'] == True: 
 				if self.cat['freq/wl_format']== 'frequency' :
 					nus = [freq_wl_cat[i].to(u.Hz) for i in range(len(freq_wl_cat))].asarray()
 				if self.cat['freq/wl_format']== 'wavelength' :
 					nus = [freq_wl_cat[i].to(u.Hz, equivalencies=u.spectral()) for i in range(len(freq_wl_cat))].asarray()
+
 
 				flux_cat = [ca*self.cat['flux_unit'] for ca in  column[self.cat['flux_list']] ]
 				fluxes = np.array([flux_cat[i].to(u.erg/ u.s/ (u.cm)**2 / u.Hz) for i in range(len(freq_wl_cat))])
@@ -80,7 +81,7 @@ class DATA:
 				ndflag_cat = column[self.cat['ndflag_list']]
 
 			## If NO columns with flags exist
-			elif self.cat['ndflag_bool'] == 'no':
+			elif self.cat['ndflag_bool'] == False:
 				if self.cat['freq/wl_format']== 'frequency' :
 					nus = np.log10(np.array([freq_wl_cat[i].to(u.Hz) for i in range(len(freq_wl_cat))]))
 				if self.cat['freq/wl_format']== 'wavelength' :

@@ -13,7 +13,6 @@ import numpy as np
 import math
 from collections import defaultdict
 
-from GENERAL_AGNfitter import frange
 import MODEL_AGNfitter as model
 import time
 import shelve
@@ -453,4 +452,9 @@ def filter_dictionaries(filterset, path):
 	return bands, files_dict, lambdas_dict, factors_dict
 
 
+def frange(start, stop, step):
+    r = start
+    while r < stop:
+         yield r
+         r += step
 

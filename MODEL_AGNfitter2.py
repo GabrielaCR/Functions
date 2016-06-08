@@ -738,8 +738,7 @@ def stellar_info(chain, data):
 	nn= NearestNeighbourSimple1D(agelog, agelog_file , 1)
 	nn= int(nn)
 	mstar_line = mstar_file[nn]
-	SFR_line = sfr_file[nn]	
-	print N
+	SFR_line = sfr_file[nn]
 
 
 	#Calculate Mstar
@@ -749,7 +748,6 @@ def stellar_info(chain, data):
 	
 	#Calculate SFR. output is in [Msun/yr]
 	SFR = N *  exp(-(10**agelog_file[nn]/ 1e9)/ tau) / (tau* 1e9)
-	print SFR
 
 	SFR_list.append(SFR)	
 
@@ -770,7 +768,7 @@ def stellar_info_array(chain_flat, data, Nthin_compute):
     Ns, Npar = np.shape(chain_flat)  
     chain_thinned = chain_flat[0:Ns:int(Ns/Nthin_compute),:]
     
-    Mstar, SFR, SFR_file = model.stellar_info(chain_thinned, data)
+    Mstar, SFR, SFR_file = stellar_info(chain_thinned, data)
     Mstar_list = []
     SFR_list = []
     SFR_file_list = []

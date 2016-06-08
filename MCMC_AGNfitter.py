@@ -19,7 +19,7 @@ It contains:
 
 """
 
-import emcee
+import emcee #Author: Dan Foreman-Mackey (danfm@nyu.edu)
 import sys,os
 import time
 import numpy as np
@@ -103,7 +103,8 @@ def main(data, P, mc):
     sourceline = data.sourceline
     catalog = data.catalog
     sourcename = data.name
-    dict_modelsfiles =data.dict_modelfile
+    data.DICTS(mc)
+    dict_modelsfiles =data.dict_modelsfiles
     dict_modelfluxes =data.dict_modelfluxes
     z = data.z
 
