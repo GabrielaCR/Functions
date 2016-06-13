@@ -628,7 +628,6 @@ def GALAXY2(gal_nu, gal_Fnu_red,  filterdict, z):
 
 	gal_nu = np.log10(gal_nu)
 	bands, gal_y_red_filtered =  filters1(gal_nu, gal_Fnu_red, filterdict, z)	
-
 	gal_y_red_filtered = gal_y_red_filtered.reshape(np.shape(bands)) 
 
 	return bands, gal_y_red_filtered
@@ -915,9 +914,8 @@ def filters1( model_nus, model_fluxes, filterdict, z ):
 		model_fluxes_nu = model_fluxes[::-1]
 			
 		model_fluxes_lambda = fluxnu_2_fluxlambda(model_fluxes_nu, model_lambdas) 
-	
-		model_lambdas_observed = model_lambdas 
 
+		model_lambdas_observed = model_lambdas 
 		mod2filter_interpol = interp1d(model_lambdas_observed, model_fluxes_lambda, bounds_error=False, fill_value=0.)	
 		
 		modelfluxes_at_filterlambdas = mod2filter_interpol(lambdas_filter)
@@ -1096,9 +1094,10 @@ def GALAXY_read_4plotting(galaxy_file, all_model_nus):
 
 	gal_wl_rest, gal_flux_la = np.loadtxt(galaxy_file, skiprows=2, usecols=(0,1),unpack= True)
 	gal_Fnu_r= gal_flux_la * 3.34e-19 * gal_wl_rest**2.  
-
+	#converting from Flamb to Fnu
 	gal_nu_rest =2.998 * 1.e8 / gal_wl_rest * 1.e10
 	#converting to nuFnu
+
 
 	# reverse
 	gal_nu= gal_nu_rest[::-1]
@@ -1132,215 +1131,5 @@ def BBB_read_4plotting(fn, all_model_nus):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#===================================================
-#        OLD NOT USED ANYMORE FUNCTIONS
-#
-#
-#===================================================
-
-
-#==== STARBURST (Dale&Helou, Chary&Elbaz,) ======
-
-
-def STARBURST (sbfile, data_nu, z, filterset, bands, files_dict, lambdas_dict, factors_dict):
-
-
-	c = 2.997e10
-	c_Angst = 3.34e-19 #(1/(c*Angstrom)
-	
-
-	dh_wl_rest, dh_Flambda =  np.loadtxt(sbfile, usecols=(0,1),unpack= True)
-	dh_wl = dh_wl_rest 
-	dh_nu_r = np.log10(c / (dh_wl * 1e-8)) 
-	dh_Fnu = dh_Flambda * (dh_wl**2. )* c_Angst
-
-	#reverse , in order to have increasing frequency
-	dh_nus= dh_nu_r[::-1]
-	dh_Fnu = dh_Fnu[::-1]
-
-	dh_Fnu_filtered = filters(data_nu, dh_nus, dh_Fnu, filterset, z,bands, files_dict, lambdas_dict, factors_dict)	
-
-	dh_Fnu_filtered = dh_Fnu_filtered.reshape(np.shape(data_nu)) 
-	return dh_Fnu_filtered
-
-
-
-#========== BBB (Richards) with reddening =============
-
-
-def BBB(str, BBebv, data_nu, z, filterset,bands, files_dict, lambdas_dict, factors_dict):
-
-	bbb_nu_log_rest, bbb_nuLnu_log = np.loadtxt(str, usecols=(0,1),unpack= True)
-	bbb_nu_exp = 10**(bbb_nu_log_rest) 
-	bbb_nu = np.log10(10**(bbb_nu_log_rest) )
-	bbb_nuLnu= 10**(bbb_nuLnu_log)
-
-	bbb_x = bbb_nu
-	bbb_y =	bbb_nuLnu  / bbb_nu_exp
-
-#	Application of reddening - reading E(B-V) from MCMC sampler
-	RV= 2.72
-
-	#converting freq to wavelenght, to be able to use prevots function instead on simple linera interpolation 
-	redd_x =  2.998 * 1e10 / (10**(bbb_x)* 1e-8)
-	redd_x= redd_x[::-1]
-
-	redd_inter_x = []
-
-
-	for 	i in range(len(redd_x)):
-		redd_inter_x.append(redd_x[i])
-	redd_inter_x = np.array(redd_inter_x)
-
-
-#	Define prevots function for the reddenin law redd_k
-	
-	def function_prevot(x, RV):
-   		y=1.39*pow((pow(10.,-4.)*x),-1.2)-0.38 ;
-   		return y 
-	redd_k = function_prevot(redd_inter_x, RV)
-
-# 	Making interpolation and extrapolation
-
-	reddening = interp1d(redd_inter_x, redd_k, bounds_error=True)
-	reddening2 = extrap1d(reddening)
-	bbb_k = reddening2(redd_x)
-
-	#converting back  wavelenght to freq
-	redd_f_r= 2.998 * 1e10 / (redd_x * 1e-8)
-	redd_f = redd_f_r[::-1]
-	
-	bbb_k= bbb_k[::-1]
-	redd_f = np.log10(redd_f) 
-
-	bbb_y_red = bbb_y * 10**(-0.4 * bbb_k * BBebv)	
-
-
-	bbb_y_red_filtered =  filters(data_nu, bbb_nu, bbb_y_red, filterset, z,bands, files_dict, lambdas_dict, factors_dict)	
-
-	bbb_y_red_filtered = bbb_y_red_filtered.reshape(np.shape(data_nu)) 
-
-	# This output is a restframe monochromatic luminosity, to have the same output as Beta
-	return bbb_y_red_filtered
-
-#MUST REDDENING ALSO BE REDSHIFTED?
-
-
-#==== GALAXY (BC03, solLum Angstrom-1) =====
-
-
-def GALAXY(fn, GAebv, data_nu,  z, filterset, bands, files_dict, lambdas_dict, factors_dict):
-	"""
-	this function does XXX
-
-	## inputs:
-	- fn : file name for text file with YYY in it
-	- GAebv : reddening from YYY
-
-	## output:
-	- returns foo; which we use as input to get_bar_blah()
-
-	## comments:
-	- equations from Hennawi et al 2004 http:/...
-
-	## bugs:
-	- does CCC very slowly.
-	- ignores QQQ.
-	- not sure that integral for RRR is correct.
-	"""
-
-	gal_wl_rest, gal_flux_la = np.loadtxt(fn, skiprows=2, usecols=(0,1),unpack= True)
-
-	gal_nu =2.998 * 1.e10 / gal_wl_rest * 1.e8
-	gal_nu_r = np.log10(gal_nu)
-
-	#converting to nuFnu
-	gal_Fnu_r= gal_flux_la * 3.34e-19 * gal_wl_rest**2.  
-	
-	# reverse
-	gal_nu= gal_nu_r[::-1]
-	gal_Fnu= gal_Fnu_r[::-1]
-
-	gal_x = gal_nu #log
-	gal_y = gal_Fnu
-        
-#---------------Reddening
-
-	#in cm 
-	
-	RV = 4.05		
-	wl = np.arange(0.122, 2.18, 0.02)
-	redd_k=[]
-	for 	i in range(len(wl)):
-		if (wl[i]>0.12 and wl[i]<0.63):
-			k =   2.659*(-2.156+(1.509/wl[i])-(0.198/(wl[i]**2))+(0.011/(wl[i]**3)) )+RV
-		elif (wl[i]>0.63and wl[i]<2.2):
-			k =  2.659*(-1.857+(1.040/wl[i]))+RV
-		redd_k.append(k)
-	
-	micron2cm = 1e-4
-	redd_k= np.array(redd_k)
-	redd_wl = wl*micron2cm	
-
-	redd_f_r= 2.998 * 1e10 / (redd_wl)
-	redd_f_r = np.log10(redd_f_r) 
-
-	redd_f = redd_f_r[::-1]
-	redd_k= redd_k[::-1]
-	# interpolate
-	reddening = interp1d(redd_f, redd_k, bounds_error=True)
-	reddening2 = extrap1d(reddening)
-	redd_x = gal_x
-	gal_k = reddening2(redd_x)
-
-    	gal_Fnu_red = gal_y * 10**(-0.4 * gal_k * GAebv)
-
-	gal_y_red_filtered =  filters(data_nu, gal_nu, gal_Fnu_red, filterset, z,bands, files_dict, lambdas_dict, factors_dict)	
-
-
-	gal_y_red_filtered = gal_y_red_filtered.reshape(np.shape(data_nu)) 
-
-	return gal_y_red_filtered
-
-
-
-#==== TORUS (sed_data, solLum Angstrom-1) =====
-
-def TORUS(str, data_nu, str_catalog, sourceline, z, filterset, bands, files_dict, lambdas_dict, factors_dict):
-
-
-	distance = z2Dlum(z)
-
-	tor_nu_rest, tor_nuLnu = np.loadtxt(str, skiprows=0, usecols=(0,1),unpack= True)
-	tor_nu = np.log10(10**tor_nu_rest )
-	tor_Lnu = tor_nuLnu / 10**(tor_nu)
-
-	#Coverting to fluxes
-	tor_Fnu = tor_Lnu /(4. * pi * distance**2.)# *(1+z)
-
-#=================================
-#FILTER
-
-	tor_Fnu_filtered =  filters(data_nu, tor_nu, tor_Fnu, filterset, z,bands, files_dict, lambdas_dict, factors_dict)	
-	tor_Fnu_filtered = tor_Fnu_filtered.reshape(np.shape(data_nu)) 
-
-	return tor_Fnu_filtered
 
 

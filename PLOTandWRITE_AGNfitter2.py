@@ -28,7 +28,7 @@ import GENERAL_AGNfitter as general
 import MODEL_AGNfitter2 as model
 import DICTIONARIES_AGNfitter as dicts
 import PARAMETERSPACE_AGNfitter as parspace
-import pickle
+import cPickle
 
 
 
@@ -313,11 +313,11 @@ class CHAIN:
 			self.out = out
 
 	def props(self):
-		
+
 		if os.path.lexists(self.outputfilename):
 
 			f = open(self.outputfilename, 'rb')
-			samples = pickle.load(f)
+			samples = cPickle.load(f)
 			f.close()
 
 			self.chain = samples['chain']

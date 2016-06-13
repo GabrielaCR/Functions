@@ -23,7 +23,7 @@ import emcee #Author: Dan Foreman-Mackey (danfm@nyu.edu)
 import sys,os
 import time
 import numpy as np
-import pickle
+import cPickle
 from multiprocessing import Pool
 import PARAMETERSPACE_AGNfitter as parspace
 from DATANEW_AGNfitter import DATA
@@ -58,7 +58,7 @@ def run_burn_in(sampler, mc, p0, catalog, sourceline, sourcename, folder, setnr)
 
 def save_chains(filename, sampler, pos, state):
     f = open(filename, 'wb')
-    pickle.dump(dict(
+    cPickle.dump(dict(
         chain=sampler.chain, accept=sampler.acceptance_fraction,
         lnprob=sampler.lnprobability, final_pos=pos, state=state, acor=sampler.acor), f, protocol=2)
     f.close()

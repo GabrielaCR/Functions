@@ -84,7 +84,7 @@ def ymodel(data_nus, z, dict_modelsfiles, dict_modelfluxes, *par):
 
 
 
-  # pick templates for physical parameters
+  # pick templates for physical parameters #!!!
   SB_filename = model.pick_STARBURST_template(irlum, filename_0_starburst, all_irlum)
   GA_filename = model.pick_GALAXY_template(tau, age, filename_0_galaxy, all_tau, all_age) 
   TOR_filename = model.pick_TORUS_template(nh, all_nh, filename_0_torus)
@@ -95,8 +95,6 @@ def ymodel(data_nus, z, dict_modelsfiles, dict_modelfluxes, *par):
   EBV_bbb = (  str(int(EBV_bbb_0)) if  float(EBV_bbb_0).is_integer() else str(EBV_bbb_0))
   EBV_gal_0 = model.pick_EBV_grid(EBVgal_array,GAebv)
   EBV_gal = (  str(int(EBV_gal_0)) if  float(EBV_gal_0).is_integer() else str(EBV_gal_0))
-#  EBV_gal = ( str(int(0)) if float(EBV_gal_0)==0. else str(EBV_gal_0))
-  #EBV_gal ='%.1g'%EBV_gal_0
   
 
   try: 
@@ -302,6 +300,8 @@ def galaxy_Lumfct_prior(dict_modelsfiles, dict_modelfluxes, z, *par):
 
   lumfactor = (4. * pi * distance**2.)
   bands, gal_flux = galaxy_flux(dict_modelsfiles, dict_modelfluxes, *par)
+  print 'line 303', gal_flux
+
 
   bands = np.array(bands)
   flux_B = gal_flux[(14.790 < bands)&(bands < 14.870)]
@@ -334,6 +334,8 @@ def galaxy_flux(dict_modelsfiles, dict_modelfluxes, *par):
   age = 10**agelog
 
   GA_filename = model.pick_GALAXY_template(tau, age, filename_0_galaxy, all_tau, all_age)
+
+  
   EBV_gal_0 = model.pick_EBV_grid(EBVgal_array,GAebv)
  
 #  EBV_gal = '{0:.1g}'.format(num)

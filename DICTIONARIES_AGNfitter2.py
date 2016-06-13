@@ -13,164 +13,183 @@ import numpy as np
 import math
 from collections import defaultdict
 
-import MODEL_AGNfitter as model
+import MODEL_AGNfitter2 as model
 import time
+import cPickle
 import shelve
-
-path = '/Users/Gabriela/Desktop/AGNfitter_newcode/'
-
-def construct_general_dictionary(filterbool, path):
-
-	#COSMOS_modelsdict = shelve.open(path+'models/COSMOS_modelsdict_MacOSX')
-	COSMOS_modelsdict = shelve.open(path+'models/BOOTES_modelsdict_fine_withFIR_mac_NEW')
-
-	for z in frange(0.05,4.0,0.05):#use this range to make the 'z_array_in_dict' in RUN_AGNfitter.
-		print' REDSHIFT', z
-		z_key = str(z)
-		if filterbool ==1:
-		    #Bands with band filters. Write down the version of the band&filterset. 'version1' includes all COSMOS bands. 
-		    #You can create a new band&filterset in fct 'filter_dictionaries(filterset)' in this same script.
-			
-		    filterset='BOOTES_FIR'		
-		    filterdict = filter_dictionaries(filterset, path)
-		    dict_modelsfiltered = construct_dictionaryarray_filtered(z, filterdict, path)
-		    COSMOS_modelsdict[z_key] = dict_modelsfiltered
-		    	
-		    print 'Dictionary has been created in : models/BOOTES_FIR_modelsdict_fine'
-
-	    
-		else:
-	
-		    dict_modelsnofilt = construct_dictionaryarray_nofilter(data_nu, catalog, i, z)
-		    tdict2 = time.time()
-		#    print 'Finally done! All dictionaries are saved in memory. This took ', (tdict2-tdict1)/60, ' minutes'	
-
-	COSMOS_modelsdict.close
-	return 'done'
+from astropy import units as u 
 
 
 
-def arrays_of_modelparsandfiles(path): #!!!!
+class MODELSDICT:
 
-  	"""
-
-	This function contains the file information and all the model parameter matrix available 
-
-	## inputs:
-	- 
-	## output:
-	- array of values available in the grid for each parameter (elements starting with prefix 'all_')
-	- array of file names corresponding to each value in the grid (elements starting with prefix 'filename_0_')
-
-    #this can include index reading
 
 	"""
+	Class MODELSDICT
 
-	#galaxy
-	gal_list = path +'models/GALAXY/input_template_hoggnew.dat'
-	filename_0_galaxy= np.genfromtxt(gal_list, usecols=(0), dtype = ('S') ) #all galaxy file names
-	all_tau, all_age =  np.loadtxt(gal_list, usecols=(2,3),unpack= True) #all taus and ages
+	##input: 
+	- 
 
-	#starburst
-	sb_list1= path+'models/STARBURST/DALE.list' 
-	sb_list2= path +'models/STARBURST/CHARY_ELBAZ.list'
-	filename_01= np.genfromtxt(sb_list1, usecols=(0), dtype = ('S') )
-	ir_lum_01= np.genfromtxt(sb_list1, usecols=(2), unpack= True)
-	filename_02= np.genfromtxt(sb_list2, usecols=(0), dtype = ('S') )
-	ir_lum_02= np.genfromtxt(sb_list2, usecols=(2), unpack= True)
+	##bugs: 
 
-	filename_0_starburst =np.hstack((filename_01,filename_02))
-	all_irlum = np.hstack((ir_lum_01, ir_lum_02))
+	"""     
 
-	#torus
-	tor_list = path +'models/TORUS/torus_templates_list.dat'
-	all_nh, filename_0_torus= np.loadtxt(tor_list , usecols=(0,1), unpack=True, dtype = ('S'))
+	def __init__(self, filename, path):
+		self.filename = filename
+		self.path=path
+		self.ebvgal_array = np.array(np.arange(0.,100.,5.)/100)
 
-	return all_tau, all_age, all_nh, all_irlum, filename_0_galaxy, filename_0_starburst, filename_0_torus
+	def build(self):
+
+		f = open(self.filename, 'wb')
+
+		COSMOS_modelsdict = dict()
+		for z in frange(0.3,0.9,0.3):#use this range to make the 'z_array_in_dict' in RUN_AGNfitter.
+			print' REDSHIFT', z
+			z_key = str(z)
+			    #Bands with band filters. Write down the version of the band&filterset. 'version1' includes all COSMOS bands. 
+			    #You can create a new band&filterset in fct 'filter_dictionaries(filterset)' in this same script.				
+			filterset='BOOTES_FIR'		
+			filterdict = filter_dictionaries(filterset, self.path)
+			dict_modelsfiltered = self.construct_dictionaryarray_filtered(z, filterdict, self.path)
+			COSMOS_modelsdict[z_key] = dict_modelsfiltered
+			    	
+			print 'Dictionary has been created in :', self.filename
+
+		cPickle.dump(COSMOS_modelsdict, f, protocol=2)
+		f.close()
 
 
-def construct_dictionaryarray_filtered(z, filterdict,path):
 
-	GALAXYFdict_filtered = dict()
-	STARBURSTFdict_filtered = dict()		
-	BBBFdict_filtered = dict()
-	TORUSFdict_filtered = dict()
 
-	#Two othere dictionaries, which are not leaving the function
-	GALAXY_nored_Fdict = dict()
-	BBB_nored_Fdict = dict()
+	def arrays_of_modelparsandfiles(self,path): #!!!!
 
-#OPENING TEMPLATES AND BUILDING DICTIONARIES
+	  	"""
 
-#LISTS OF MODEL TEMPLATES
-	
-	_,_,_,_, filename_0_galaxy, filename_0_starburst, filename_0_torus = arrays_of_modelparsandfiles(path)
-	
-	for i in range(len(filename_0_galaxy)):
+		This function contains the file information and all the model parameter matrix available 
 
-		GA_filename = filename_0_galaxy[i]
-		gal_nu, gal_nored_Fnu = model.GALAXY_read(path + 'models/GALAXY/'+GA_filename)
+		## inputs:
+		- 
+		## output:
+		- array of values available in the grid for each parameter (elements starting with prefix 'all_')
+		- array of file names corresponding to each value in the grid (elements starting with prefix 'filename_0_')
+
+	    #this can include index reading
+
+		"""
+
+		#galaxy
+		gal_list = path +'models/GALAXY/input_template_hoggnew.dat'
+		filename_0_galaxy= np.genfromtxt(gal_list, usecols=(0), dtype = ('S') ) #all galaxy file names
+		all_tau, all_age =  np.loadtxt(gal_list, usecols=(2,3),unpack= True) #all taus and ages
+
+		#starburst
+		sb_list1= path+'models/STARBURST/DALE.list' 
+		sb_list2= path +'models/STARBURST/CHARY_ELBAZ.list'
+		filename_01= np.genfromtxt(sb_list1, usecols=(0), dtype = ('S') )
+		ir_lum_01= np.genfromtxt(sb_list1, usecols=(2), unpack= True)
+		filename_02= np.genfromtxt(sb_list2, usecols=(0), dtype = ('S') )
+		ir_lum_02= np.genfromtxt(sb_list2, usecols=(2), unpack= True)
+
+		filename_0_starburst =np.hstack((filename_01,filename_02))
+		all_irlum = np.hstack((ir_lum_01, ir_lum_02))
+
+		#torus
+		tor_list = path +'models/TORUS/torus_templates_list.dat'
+		all_nh, filename_0_torus= np.loadtxt(tor_list , usecols=(0,1), unpack=True, dtype = ('S'))
+
+		return all_tau, all_age, all_nh, all_irlum, filename_0_galaxy, filename_0_starburst, filename_0_torus
+
+
+	def construct_dictionaryarray_filtered(self, z, filterdict,path):
+
+		GALAXYFdict_filtered = dict()
+		STARBURSTFdict_filtered = dict()		
+		BBBFdict_filtered = dict()
+		TORUSFdict_filtered = dict()
+
+		#Two othere dictionaries, which are not leaving the function
+		GALAXY_nored_Fdict = dict()
+		BBB_nored_Fdict = dict()
+
+	#OPENING TEMPLATES AND BUILDING DICTIONARIES
+
+	#LISTS OF MODEL TEMPLATES
 		
-		EBVgal_array= []
-		for (EBV_gal) in frange(0,0.5,0.1):
+		_,_,_,_, filename_0_galaxy, filename_0_starburst, filename_0_torus = self.arrays_of_modelparsandfiles(path)
 
+		galaxy_object = cPickle.load(file(path + 'models/GALAXY/bc03_v1.pickle', 'rb')) 
 
-			gal_nu, gal_Fnu_red = model.GALAXY_nf2( gal_nu, gal_nored_Fnu,EBV_gal)
-			bands, gal_Fnu_filtered = model.GALAXY2(gal_nu, gal_Fnu_red,  filterdict, z)
-			EBV_gal_key = str(EBV_gal)			
-			GALAXYFdict_filtered['models/GALAXY/'+GA_filename, EBV_gal_key] = bands, gal_Fnu_filtered
-			EBVgal_array.append(EBV_gal)
-			if np.amax(gal_Fnu_filtered) == 0:
-				print 'Error: something is wrong in the calculation of GALAXY flux'
-	print 'GALAXY done'
+		_, ageidx, tauidx, _, _,_ =  np.shape(galaxy_object.SED)
 
+		for taui in range(tauidx):
+			for agei in range(ageidx):
 
-	for i in range(len(filename_0_starburst)):
-		SB_filename = filename_0_starburst[i]
-		sb_nu0, sb_Fnu0 = model.STARBURST_read(path + 'models/STARBURST/'+SB_filename)
-		bands, sb_Fnu_filtered = model.STARBURST2(sb_nu0, sb_Fnu0, z, filterdict)
-		STARBURSTFdict_filtered['models/STARBURST/'+SB_filename] = bands, sb_Fnu_filtered
-		if np.amax(sb_Fnu_filtered) == 0:
-			print 'Error: something is wrong in the calculation of STARBURST flux'
+				gal_wl, gal_Fwl =  galaxy_object.wave, galaxy_object.SED[:,agei,taui,:,:,:].squeeze()
+				gal_nus= gal_wl.to(u.Hz, equivalencies=u.spectral())
+				gal_Fnu= gal_Fwl * 3.34e-19 * gal_wl**2.  
+				#converting from Flambda to Fnu
+
+				for EBV_gal in self.ebvgal_array:
+				
+					#Absorption
+					gal_nu, gal_Fnu_red = model.GALAXY_nf2( gal_nus.value[0:len(gal_nus):100], gal_Fnu.value[0:len(gal_nus):100], EBV_gal)	
+					#Filter: THIS IS EXPENSIVE!
+					bands,  gal_Fnu_filtered =  model.filters1(np.log10(gal_nu), gal_Fnu_red, filterdict, z)	
+					EBV_gal_key = str(EBV_gal)			
+					GALAXYFdict_filtered[str(galaxy_object.tau.value[taui]),str(galaxy_object.tg.value[agei]), EBV_gal_key] = bands, gal_Fnu_filtered
 	
-	print  'STARBUST done'	
+#					if np.amax(gal_Fnu_filtered) == 0:
+#						print 'Error: something is wrong in the calculation of GALAXY flux'
+		print 'GALAXY done'
 
 
 
-	for i in range(1):
-		BB_filename = 'models/BBB/richardsbbb.dat'
-		bbb_nu, bbb_Fnu = model.BBB_read(path +BB_filename)
-		BBB_nored_Fdict[BB_filename] = bbb_nu,bbb_Fnu
-		EBVbbb_array= []
-		for (EBV_bbb) in frange(0,1,0.1):
-			bbb_nu, bbb_nored_Fnu = BBB_nored_Fdict[BB_filename]
-			bbb_nu0, bbb_Fnu_red = model.BBB_nf2(bbb_nu, bbb_nored_Fnu, EBV_bbb, z )
-			bands, bbb_Fnu_filtered = model.BBB2(bbb_nu0, bbb_Fnu_red, filterdict,z)
-			EBV_bbb_key = str(EBV_bbb)
-			EBVbbb_array.append(EBV_bbb) #to have the list written down
-			BBBFdict_filtered[BB_filename, EBV_bbb_key] = bands, bbb_Fnu_filtered
-			if np.amax(bbb_Fnu_filtered) == 0:
-				print 'Error: something is wrong in the calculation of BBB flux'
+		for i in range(len(filename_0_starburst)):
+			SB_filename = filename_0_starburst[i]
+			sb_nu0, sb_Fnu0 = model.STARBURST_read(path + 'models/STARBURST/'+SB_filename)
+			bands, sb_Fnu_filtered = model.STARBURST2(sb_nu0, sb_Fnu0, z, filterdict)
+			STARBURSTFdict_filtered['models/STARBURST/'+SB_filename] = bands, sb_Fnu_filtered
+			if np.amax(sb_Fnu_filtered) == 0:
+				print 'Error: something is wrong in the calculation of STARBURST flux'
 		
-	print 'BBB done'
-	for i in range(len(filename_0_torus)):
-		TO_filename = filename_0_torus[i]
-		print 'TO', i
-		tor_nu0, tor_Fnu0 = model.TORUS_read(path +TO_filename, z)
-		bands, tor_Fnu_filtered = model.TORUS2(tor_nu0, tor_Fnu0, z, filterdict)
-		TORUSFdict_filtered[TO_filename] = bands, tor_Fnu_filtered
-		if np.amax(tor_Fnu_filtered) == 0:
-			print 'Error: something is wrong in the calculation of TORUS flux'
-
-
-	print 'TORUS done'
-
-	EBVgal_array = np.array(EBVgal_array)
-	EBVbbb_array = np.array(EBVbbb_array)
+		print  'STARBUST done'	
 
 
 
-	return STARBURSTFdict_filtered , BBBFdict_filtered, GALAXYFdict_filtered, TORUSFdict_filtered, EBVbbb_array, EBVgal_array
+		for i in range(1):
+			BB_filename = 'models/BBB/richardsbbb.dat'
+			bbb_nu, bbb_Fnu = model.BBB_read(path +BB_filename)
+			BBB_nored_Fdict[BB_filename] = bbb_nu,bbb_Fnu
+			EBVbbb_array= []
+			for (EBV_bbb) in frange(0,1,0.1):
+				bbb_nu, bbb_nored_Fnu = BBB_nored_Fdict[BB_filename]
+				bbb_nu0, bbb_Fnu_red = model.BBB_nf2(bbb_nu, bbb_nored_Fnu, EBV_bbb, z )
+				bands, bbb_Fnu_filtered = model.BBB2(bbb_nu0, bbb_Fnu_red, filterdict,z)
+				EBV_bbb_key = str(EBV_bbb)
+				EBVbbb_array.append(EBV_bbb) #to have the list written down
+				BBBFdict_filtered[BB_filename, EBV_bbb_key] = bands, bbb_Fnu_filtered
+				if np.amax(bbb_Fnu_filtered) == 0:
+					print 'Error: something is wrong in the calculation of BBB flux'
+			
+		print 'BBB done'
+		for i in range(len(filename_0_torus)):
+			TO_filename = filename_0_torus[i]
+			tor_nu0, tor_Fnu0 = model.TORUS_read(path +TO_filename, z)
+			bands, tor_Fnu_filtered = model.TORUS2(tor_nu0, tor_Fnu0, z, filterdict)
+			TORUSFdict_filtered[TO_filename] = bands, tor_Fnu_filtered
+			if np.amax(tor_Fnu_filtered) == 0:
+				print 'Error: something is wrong in the calculation of TORUS flux'
+
+
+		print 'TORUS done'
+
+
+		EBVbbb_array = np.array(EBVbbb_array)
+
+
+
+		return STARBURSTFdict_filtered , BBBFdict_filtered, GALAXYFdict_filtered, TORUSFdict_filtered, EBVbbb_array, self.ebvgal_array
 
 
 
@@ -450,8 +469,8 @@ def filter_dictionaries(filterset, path):
 			lambdas_dict[bands[i]].append(lambdas[i])
 			factors_dict[bands[i]].append(factors[i])
 
-	print 'A dictionary has been constructed for the bands: '
-	print bands		
+	# print 'A dictionary has been constructed for the bands: '
+	# print bands		
 	return bands, files_dict, lambdas_dict, factors_dict
 
 
