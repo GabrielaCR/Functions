@@ -25,7 +25,7 @@ from astropy.table import Table
 from astropy.io import fits
 import cPickle
 from functions.GENERAL_AGNfitter import NearestNeighbourSimple1D
-import functions.DICTIONARIES_AGNfitter as dicts
+import functions.DICTIONARIES_AGNfitter2 as dicts
 
 
 class DATA:
@@ -123,10 +123,8 @@ class DATA:
 		#COSMOS_modelsdict = shelve.open(self.dict_path)
 
 		COSMOS_modelsdict = cPickle.load(file(self.dict_path, 'rb')) 
-		print COSMOS_modelsdict.keys
 
-		self.dict_modelsfiles = dicts.arrays_of_modelparsandfiles(self.path)
-		self.filterdict = dicts.filter_dictionaries(mc['Bandset'], self.path)           
+		self.filterdict = dicts.filter_dictionaries(mc['Bandset'], self.path)   
 		self.dict_modelfluxes = COSMOS_modelsdict[z_key]
-
-
+		self.dictkey_arrays = dicts.dictkey_arrays(self.dict_modelfluxes)
+		

@@ -163,71 +163,6 @@ class OUTPUT:
 			figure = triangle.corner(self.int_lums.T, labels= labels,   plot_contours=True, plot_datapoints = False, show_titles=True, quantiles=[0.16, 0.50, 0.84])
 		return figure
 
-	def plot_bestfit_SED(self):		
-
-		# xpb, ypb = objfluxes.4plot_bestfit(objfluxes.all_nus_rest,objfluxes.nuLnu)
-
-
-		# source = self.data.name
-		# data_nus= self.data.nus
-		# ydata_0 = self.data.fluxes
-		# yerrors_0 = self.data.fluxerrs
-		# z = self.data.z
-
-		# # Choosing only existing data points (source-dependent: not total CATALOG array)
-		# # data_nus = data_nus_0[index_dataexist]
-		# # data_flux = ydata_0[index_dataexist]
-		# # data_errors = yerrors_0[index_dataexist]
-
-
-		# data_nus_obs = 10**data_nus
-		# data_nus_rest =10**data_nus*(1+z) #rest
-		# data_nus =np.log10(data_nus_rest)
-		# all_nus_rest = 10**all_nus
-		# all_nus_obs = 10**all_nus/(1+z) #observed 
-		# distance= model.z2Dlum(z)
-		# lumfactor = (4. * math.pi * distance**2.)
-
-
-		# data_nuLnu_rest = data_flux* data_nus_obs *lumfactor
-		# data_errors_rest= data_errors * data_nus_obs * lumfactor
-
-		# fig, ax1, ax2 = SED_plotting_settings(all_nus_rest, data_nuLnu_rest)
-
-
-		# SBnuLnu, BBnuLnu, GAnuLnu, TOnuLnu, TOTALnuLnu, BBnuLnu_deredd = [f[0] for f in FLUXES2nuLnu_4plotting(all_nus_rest, FLUXES4plotting, z)]
-
-		# #    print np.shape(filtered_modelpoints), np.shape(data_nus_0), np.shape(data_nus)
-		# #    filtered_modelpoints_best = filtered_modelpoints * (10**data_nus_0) * lumfactor
-
-
-
-		# #Settings for model lines
-		# SBcolor, BBcolor, GAcolor, TOcolor, TOTALcolor= SED_colors(combination = 'a')
-		# lw= 1.5
-		# p1= ax1.plot( all_nus, TOTALnuLnu, marker="None", linewidth=lw,  label="1 /sigma", color= TOTALcolor, alpha= 1.0)
-		# p2=ax1.plot(all_nus, SBnuLnu, marker="None", linewidth=lw, label="1 /sigma", color= SBcolor, alpha = 0.6)
-		# p3=ax1.plot(all_nus, BBnuLnu, marker="None", linewidth=lw, label="1 /sigma",color= BBcolor, alpha = 0.6)
-		# p4=ax1.plot( all_nus, GAnuLnu,marker="None", linewidth=lw, label="1 /sigma",color=GAcolor, alpha = 0.6)
-		# p5=ax1.plot( all_nus, TOnuLnu, marker="None",  linewidth=lw, label="1 /sigma",color= TOcolor, alpha = 0.6)
-		# interp_total= scipy.interpolate.interp1d(all_nus, TOTALnuLnu, bounds_error=False, fill_value=0.)
-		# TOTALnuLnu_at_datapoints = interp_total(data_nus)
-
-
-		# #    p6 = ax1.plot(np.log10(10**data_nus_0*(1+z)), filtered_modelpoints_best[0] ,  marker='o', linestyle="None", markersize=5, color="red")
-		# #p6 = ax1.plot(data_nus, TOTALnuLnu_at_datapoints ,  marker='o', linestyle="None", markersize=5, color="red")
-
-		# (_, caps, _) = ax1.errorbar(data_nus, data_nuLnu_rest, yerr= data_errors_rest, capsize=4, linestyle="None", linewidth=1.5,  marker='o',markersize=5, color="black", alpha = 0.5)
-
-		# ax1.annotate(r'XID='+str(source)+r', z ='+ str(z), xy=(0, 1),  xycoords='axes points', xytext=(20, 310), textcoords='axes points' )#+ ', log $\mathbf{L}_{\mathbf{IR}}$= ' + str(Lir_agn) +', log $\mathbf{L}_{\mathbf{FIR}}$= ' + str(Lfir) + ',  log $\mathbf{L}_{\mathbf{UV}} $= '+ str(Lbol_agn)
-
-		# #plt.savefig(folder+str(source)+'/SEDbest_'+str(source)+'.pdf', format = 'pdf')#, dpi = 900
-
-		# print ' => Best fit SED was plotted.'
-		# return fig
-
-
-		print 'plot'
 
 	def plot_manyrealizations_SED(self):	
 
@@ -239,25 +174,26 @@ class OUTPUT:
 		z = self.data.z
 		all_nus =self.allnus
 		Nrealizations = self.out['realizations2plot']
-		#data nuLnu
+
 		data_nus_obs = 10**data_nus 
 		data_nus_rest = 10**data_nus * (1+z) 
 		data_nus = np.log10(data_nus_rest)
+
 		all_nus_rest = 10**all_nus 
 		all_nus_obs =  10**all_nus / (1+z) #observed
+
 		distance= model.z2Dlum(z)
 		lumfactor = (4. * math.pi * distance**2.)
 		data_nuLnu_rest = ydata* data_nus_obs *lumfactor
 		data_errors_rest= yerror * data_nus_obs * lumfactor
 
 		fig, ax1, ax2 = SED_plotting_settings(all_nus_rest, data_nuLnu_rest)
-
-		SBnuLnu, BBnuLnu, GAnuLnu, TOnuLnu, TOTALnuLnu, BBnuLnu_deredd = self.nuLnus
-
 		SBcolor, BBcolor, GAcolor, TOcolor, TOTALcolor= SED_colors(combination = 'a')
 		lw= 1.5
 
+		SBnuLnu, BBnuLnu, GAnuLnu, TOnuLnu, TOTALnuLnu, BBnuLnu_deredd = self.nuLnus
 		thinning_4plot = len(TOTALnuLnu) / (Nrealizations)
+
 
 
 		for i in range(Nrealizations):
@@ -270,7 +206,6 @@ class OUTPUT:
 		    p1= ax1.plot( all_nus, TOTALnuLnu[i], marker="None", linewidth=lw,  label="1 /sigma", color= TOTALcolor, alpha= 0.5)
 
 		    interp_total= scipy.interpolate.interp1d(all_nus, TOTALnuLnu[i], bounds_error=False, fill_value=0.)
-
 		    TOTALnuLnu_at_datapoints = interp_total(data_nus)
 
 
@@ -426,8 +361,6 @@ class FLUXES_ARRAYS:
 		"""
 		self.chain_obj.props()
 
-		print dir(self.chain_obj)
-
 		SBFnu_list = []
 		BBFnu_list = []
 		GAFnu_list= []
@@ -438,18 +371,19 @@ class FLUXES_ARRAYS:
 			filtered_modelpoints_list = []
 
 
-		all_tau, all_age, all_nh, all_irlum, filename_0_galaxy, filename_0_starburst, filename_0_torus = data.dict_modelsfiles
-		STARBURSTFdict , BBBFdict, GALAXYFdict, TORUSFdict, EBVbbb_array, EBVgal_array = data.dict_modelfluxes
+		gal_do,  irlum_dict, nh_dict, BBebv_dict = data.dictkey_arrays
+		# Take the last 4 dictionaries, which are for plotting. (the first 4 were at bands)
+		_,_,_,_,STARBURSTFdict , BBBFdict, GALAXYFdict, TORUSFdict= data.dict_modelfluxes
 
 		nsample, npar = self.chain_obj.flatchain.shape
 		source = data.name
 
 		if self.output_type == 'plot':
-			tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv0, GAebv0= self.chain_obj.flatchain[np.random.choice(nsample, (self.out['realizations2plot'])),:].T
+			tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv, GAebv= self.chain_obj.flatchain[np.random.choice(nsample, (self.out['realizations2plot'])),:].T
 		elif self.output_type == 'int_lums':
-			tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv0, GAebv0= self.chain_obj.flatchain[np.random.choice(nsample, (self.out['realizations2int'])),:].T
+			tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv, GAebv= self.chain_obj.flatchain[np.random.choice(nsample, (self.out['realizations2int'])),:].T
 		elif self.output_type == 'best_fit':
-			tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv0, GAebv0= self.best_fit_pars
+			tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv, GAebv= self.best_fit_pars
 
 		age = 10**agelog
 
@@ -457,49 +391,49 @@ class FLUXES_ARRAYS:
 
 		for g in range(len(tau)):
 
-			BBebv1 = model.pick_EBV_grid(EBVbbb_array, BBebv0[g])
-			BBebv = (  str(int(BBebv1)) if  float(BBebv1).is_integer() else str(BBebv1))
-			GAebv1 = model.pick_EBV_grid(EBVgal_array,GAebv0[g])
-			GAebv = (  str(int(GAebv1)) if  float(GAebv1).is_integer() else str(GAebv1))
 
-			#Pick the template filename corresponding to the par values
-			SB_filename = data.path + model.pick_STARBURST_template(irlum[g], filename_0_starburst, all_irlum)
-			GA_filename = data.path + model.pick_GALAXY_template(tau[g], age[g], filename_0_galaxy, all_tau, all_age)
-			TO_filename = data.path + model.pick_TORUS_template(nh[g], all_nh, filename_0_torus)
-			BB_filename = data.path + model.pick_BBB_template()
+			# Pick dictionary key-values, nearest to the MCMC- parameter values
+			irlum_dct = model.pick_STARBURST_template(irlum[g], irlum_dict)
+			nh_dct = model.pick_TORUS_template(nh[g], nh_dict)
+			ebvbbb_dct = model.pick_BBB_template(BBebv[g], BBebv_dict)
+			gal_do.nearest_par2dict(tau[g], age[g], GAebv[g])
+			tau_dct, age_dct, ebvg_dct=gal_do.t, gal_do.a,gal_do.e
 
-			#Read the frequencies and fluxes of each file
-			#For each physical component
-			gal_nu, gal_nored_Fnu = model.GALAXY_read_4plotting( GA_filename, self.all_nus_rest)
-			gal_nu, gal_Fnu_red = model.GALAXY_nf2( gal_nu, gal_nored_Fnu, float(GAebv) )
-			all_gal_nus, all_gal_Fnus =gal_nu, gal_Fnu_red
+			#Produce model fluxes at all_nus_rest for plotting, through interpolation
+			all_gal_nus, gal_Fnus = GALAXYFdict[tau_dct, age_dct,ebvg_dct]   
+			GAinterp = scipy.interpolate.interp1d(all_gal_nus, gal_Fnus, bounds_error=False, fill_value=0.)
+			all_gal_Fnus = GAinterp(self.all_nus_rest)
 
-			sb_nu0, sb_Fnu0 = model.STARBURST_read_4plotting(SB_filename, self.all_nus_rest)
-			all_sb_nus, all_sb_Fnus = sb_nu0, sb_Fnu0
+			all_sb_nus, sb_Fnus= STARBURSTFdict[irlum_dct] 
+			SBinterp = scipy.interpolate.interp1d(all_sb_nus, sb_Fnus, bounds_error=False, fill_value=0.)
+			all_sb_Fnus = SBinterp(self.all_nus_rest)
 
-			bbb_nu, bbb_nored_Fnu = model.BBB_read_4plotting(BB_filename, self.all_nus_rest)
-			bbb_nu0, bbb_Fnu_red = model.BBB_nf2(bbb_nu, bbb_nored_Fnu,float(BBebv), data.z )
-			all_bbb_nus, all_bbb_Fnus = bbb_nu0, bbb_Fnu_red
-			all_bbb_nus, all_bbb_Fnus_deredd = bbb_nu0, bbb_nored_Fnu
+			all_bbb_nus, bbb_Fnus = BBBFdict[ebvbbb_dct] 
+			BBinterp = scipy.interpolate.interp1d(all_bbb_nus, bbb_Fnus, bounds_error=False, fill_value=0.)
+			all_bbb_Fnus = BBinterp(self.all_nus_rest)
 
-			all_tor_nus, all_tor_Fnus = model.TORUS_read_4plotting(TO_filename, data.z, self.all_nus_rest)
+			all_bbb_nus, bbb_Fnus_deredd = BBBFdict['0']
+			BBderedinterp = scipy.interpolate.interp1d(all_bbb_nus, bbb_Fnus_deredd, bounds_error=False, fill_value=0.)
+			all_bbb_Fnus_deredd = BBderedinterp(self.all_nus_rest)
+
+			all_tor_nus, tor_Fnus= TORUSFdict[nh_dct]
+			TOinterp = scipy.interpolate.interp1d(all_tor_nus, np.log10(tor_Fnus), bounds_error=False, fill_value=0.)
+			all_tor_Fnus = 10**(TOinterp(self.all_nus_rest))		
 
 
-			#Only if SED plotting: Compute the modelled flux values at each data point 
-			#Integrating within the filter curves
 			if self.output_type == 'plot':
-				par2 = tau[g], agelog[g], nh[g], irlum[g], SB[g] ,BB[g], GA[g] ,TO[g], float(BBebv), float(GAebv)
-				filtered_modelpoints = parspace.ymodel(data.nus,data.z, data.dict_modelsfiles, data.dict_modelfluxes, *par2)
+				par2 = tau[g], agelog[g], nh[g], irlum[g], SB[g] ,BB[g], GA[g] ,TO[g], BBebv[g], GAebv[g]
+				filtered_modelpoints = parspace.ymodel(data.nus,data.z, data.dictkey_arrays, data.dict_modelfluxes, *par2)
+				
 
-
-			#Using the costumized normalization !!!!!	
+			#Using the costumized normalization 
 			SBFnu =   (all_sb_Fnus /1e20) *10**float(SB[g]) 
 			BBFnu = (all_bbb_Fnus /1e60) * 10**float(BB[g]) 
 			GAFnu =   (all_gal_Fnus/ 1e18) * 10**float(GA[g]) 
 			TOFnu =   (all_tor_Fnus/  1e-40) * 10**float(TO[g])
 			BBFnu_deredd = (all_bbb_Fnus_deredd /1e60) * 10**float(BB[g])
 
-			TOTALFnu =    SBFnu + BBFnu + GAFnu + TOFnu
+			TOTALFnu =  SBFnu + BBFnu + GAFnu + TOFnu
 			
 			#Append to the list for all realizations
 			SBFnu_list.append(SBFnu)
@@ -531,7 +465,7 @@ class FLUXES_ARRAYS:
 			filtered_modelpoints = np.array(filtered_modelpoints_list)
 			distance= model.z2Dlum(data.z)
 			lumfactor = (4. * math.pi * distance**2.)
-			self.filtered_modelpoints_nuLnu = filtered_modelpoints  *lumfactor* 10**(data.nus)
+			self.filtered_modelpoints_nuLnu = filtered_modelpoints *lumfactor* 10**(data.nus)
 		
 		#Only if calculating integrated luminosities:	
 		elif self.output_type == 'int_lums':
@@ -616,8 +550,11 @@ def fig_axes(nrows, ncols, npar, width=13):
 
 def SED_plotting_settings(x, ydata):
 
-
-
+	"""
+	This function produces the setting for the figures for SED plotting.
+	**Input:
+	- all nus, and data (to make the plot limits depending on the data)
+	"""
 	fig = plt.figure()
 
 	ax1 = fig.add_subplot(111)
@@ -641,7 +578,7 @@ def SED_plotting_settings(x, ydata):
 	ax1.set_xscale('linear')
 	ax1.set_yscale('log')
 
-#	ax1.set_xlim([11.5,16])
+
 	mediandata = np.median(ydata)
 	ax1.set_ylim(mediandata /50.,mediandata * 50.)
 
@@ -649,7 +586,6 @@ def SED_plotting_settings(x, ydata):
 	ax2.set_yscale('log')
 	ax2.set_ylim( mediandata /50., mediandata * 50.)
 
-#	ax2.set_xlim([2.98e8 / (10**11.5) / (1e-6) , (2.98e8) / (10**16) / (1e-6)])
 	ax2.set_xticks([100, 10,1, 0.1]) 
 	ax2.get_xaxis().set_major_formatter(ticker.ScalarFormatter())
 

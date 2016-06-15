@@ -23,7 +23,7 @@ import numpy as np
 from math import pi
 import time
 import pickle
-import MODEL_AGNfitter as model
+import MODEL_AGNfitter2 as model
 
 
 
@@ -60,7 +60,7 @@ def Pdict (data):
 
 
 
-def ymodel(data_nus, z, dict_modelsfiles, dict_modelfluxes, *par):
+def ymodel(data_nus, z, dictkey_arrays, dict_modelfluxes, *par):
   """
   This function constructs the model from the parameter values
 
@@ -71,55 +71,47 @@ def ymodel(data_nus, z, dict_modelsfiles, dict_modelfluxes, *par):
   - the total model amplitude
 
   """
+  STARBURSTFdict , BBBFdict, GALAXYFdict, TORUSFdict,_,_,_,_= dict_modelfluxes
+  gal_do,  irlum_dict, nh_dict, BBebv_dict= dictkey_arrays
 
-  all_tau, all_age, all_nh, all_irlum, filename_0_galaxy, filename_0_starburst, filename_0_torus = dict_modelsfiles
-  STARBURSTFdict , BBBFdict, GALAXYFdict, TORUSFdict, EBVbbb_array, EBVgal_array= dict_modelfluxes
-
-  agntype = 2
-
-  # calling parameters from Emcee
+  # Call MCMC-parameter values 
   tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv, GAebv= par[0:10]
- 
   age = 10**agelog
 
+  # Pick dictionary key-values, nearest to the MCMC- parameter values
+  irlum_dct = model.pick_STARBURST_template(irlum, irlum_dict)
+  nh_dct = model.pick_TORUS_template(nh, nh_dict)
+  ebvbbb_dct = model.pick_BBB_template(BBebv, BBebv_dict)
 
+  gal_do.nearest_par2dict(tau, age, GAebv)
+  tau_dct, age_dct, ebvg_dct=gal_do.t, gal_do.a,gal_do.e
 
-  # pick templates for physical parameters #!!!
-  SB_filename = model.pick_STARBURST_template(irlum, filename_0_starburst, all_irlum)
-  GA_filename = model.pick_GALAXY_template(tau, age, filename_0_galaxy, all_tau, all_age) 
-  TOR_filename = model.pick_TORUS_template(nh, all_nh, filename_0_torus)
-  BB_filename = model.pick_BBB_template()
-
-
-  EBV_bbb_0 = model.pick_EBV_grid(EBVbbb_array, BBebv)
-  EBV_bbb = (  str(int(EBV_bbb_0)) if  float(EBV_bbb_0).is_integer() else str(EBV_bbb_0))
-  EBV_gal_0 = model.pick_EBV_grid(EBVgal_array,GAebv)
-  EBV_gal = (  str(int(EBV_gal_0)) if  float(EBV_gal_0).is_integer() else str(EBV_gal_0))
-  
-
+  # Call fluxes from dictionary using keys-values
   try: 
-    bands, gal_Fnu = GALAXYFdict[GA_filename, EBV_gal]
-    bands, sb_Fnu= STARBURSTFdict[SB_filename] 
-    bands, bbb_Fnu = BBBFdict[BB_filename, EBV_bbb] 
-    bands, tor_Fnu= TORUSFdict[TOR_filename]
+    bands, gal_Fnu = GALAXYFdict[tau_dct, age_dct,ebvg_dct]   
+    bands, sb_Fnu= STARBURSTFdict[irlum_dct] 
+    bands, bbb_Fnu = BBBFdict[ebvbbb_dct] 
+    bands, tor_Fnu= TORUSFdict[nh_dct]
+ 
   except ValueError:
-    print 'Error: Dictionary does not contain TORUS file:'+TOR_filename
+    print 'Error: Dictionary does not contain some values'
+
+  # Renormalize to have similar amplitudes. Keep these fixed!
+    
+  sb_Fnu_norm = sb_Fnu.squeeze()/ 1e20  
+  bbb_Fnu_norm = bbb_Fnu.squeeze() / 1e60
+  gal_Fnu_norm = gal_Fnu.squeeze() / 1e18
+  tor_Fnu_norm = tor_Fnu.squeeze()/  1e-40
 
 
-  sb_Fnu_norm = sb_Fnu / 1e20#e50  
-  bbb_Fnu_norm = bbb_Fnu / 1e60#e90
-  gal_Fnu_norm = gal_Fnu / 1e18
-  tor_Fnu_norm = tor_Fnu/  1e-40
-
-# Sum components
-#  ---------------------------------------------------------------------------------------------------------------------------------------------------------#
+  # Total SED sum
+  #---------------------------------------------------------------------------------------------------------------------------------------------------------#
 
   lum =    10**(SB)* sb_Fnu_norm      +     10**(BB)*bbb_Fnu_norm    +     10**(GA)*gal_Fnu_norm     +     (10**TO) *tor_Fnu_norm 
 
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------
+  #-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
   lum = lum.reshape((np.size(lum),))  
-
 
   return lum
 
@@ -152,7 +144,7 @@ def ln_prior(dict_modelsfiles, dict_modelfluxes, z, P, pars):
 
 
 
-def ln_likelihood(pars, x, y, ysigma, z, dict_modelsfiles, dict_modelfluxes):
+def ln_likelihood(pars, x, y, ysigma, z, dictkey_arrays, dict_modelfluxes):
     """
     This function constructs the model from the parameter values
 
@@ -164,13 +156,12 @@ def ln_likelihood(pars, x, y, ysigma, z, dict_modelsfiles, dict_modelfluxes):
 
     """
 
-    y_model = ymodel(x,z,dict_modelsfiles,dict_modelfluxes,*pars)
+    y_model = ymodel(x,z,dictkey_arrays,dict_modelfluxes,*pars)
 
     #x_valid:
     #only frequencies with existing data (no detections nor limits F = -99)    
     #Consider only data free of IGM absorption. Lyz = 15.38 restframe    
     array = np.arange(len(x))
-
     x_valid = array[(x< np.log10(10**(15.38)/(1+z))) & (y>-99.)]
   
     
@@ -180,9 +171,9 @@ def ln_likelihood(pars, x, y, ysigma, z, dict_modelsfiles, dict_modelfluxes):
     return -0.5 * np.dot(resid, resid)
 
 
-#POSTERIOR
 
-def ln_probab(pars, x, y, ysigma, z, dict_modelsfiles, dict_modelfluxes, P):
+
+def ln_probab(pars, x, y, ysigma, z, dictkey_arrays, dict_modelfluxes, P):
 
   """
   This function constructs the model from the parameter values
@@ -195,22 +186,20 @@ def ln_probab(pars, x, y, ysigma, z, dict_modelsfiles, dict_modelfluxes, P):
 
   """
 
-  lnp = ln_prior(dict_modelsfiles, dict_modelfluxes, z, P, pars)
+  lnp = ln_prior(dictkey_arrays, dict_modelfluxes, z, P, pars)
 
   if np.isfinite(lnp):  
     
-
-    posterior = lnp + ln_likelihood(pars, x,y, ysigma, z, dict_modelsfiles, dict_modelfluxes)
-    
+    posterior = lnp + ln_likelihood(pars, x,y, ysigma, z, dictkey_arrays, dict_modelfluxes)   
     return posterior
 
   return -np.inf
 
 
 
-#============================================
-#                                     INITIAL POSITIONS
-#============================================
+"""--------------------------------------
+Functions to obtain initial positions
+--------------------------------------"""
 
 
 
@@ -295,12 +284,10 @@ def galaxy_Lumfct_prior(dict_modelsfiles, dict_modelfluxes, z, *par):
 
   # Calculated B-band at this parameter space point
   h_70 = 1.
-
-  distance = model.z2Dlum(z)#/3.08567758e24
-
+  distance = model.z2Dlum(z)
   lumfactor = (4. * pi * distance**2.)
+
   bands, gal_flux = galaxy_flux(dict_modelsfiles, dict_modelfluxes, *par)
-  print 'line 303', gal_flux
 
 
   bands = np.array(bands)
@@ -323,29 +310,19 @@ def galaxy_Lumfct_prior(dict_modelsfiles, dict_modelfluxes, z, *par):
   return expected,thispoint
 
 
-def galaxy_flux(dict_modelsfiles, dict_modelfluxes, *par):
-
-  all_tau, all_age, all_nh, all_irlum, filename_0_galaxy, filename_0_starburst, filename_0_torus = dict_modelsfiles
-  STARBURSTFdict , BBBFdict, GALAXYFdict, TORUSFdict, EBVbbb_array, EBVgal_array= dict_modelfluxes
-
+def galaxy_flux(dictkey_arrays, dict_modelfluxes, *par):
+  # call dictionary
+  gal_do,  _,_,_= dictkey_arrays  
+  STARBURSTFdict , BBBFdict, GALAXYFdict, TORUSFdict,_,_,_,_= dict_modelfluxes
   # calling parameters from Emcee
   tau, agelog, nh, irlum, SB ,BB, GA,TO, BBebv, GAebv= par[0:10]
- 
   age = 10**agelog
+  #nearest dict-key value to MCMC value
+  gal_do.nearest_par2dict(tau, age, GAebv)
+  tau_dct, age_dct, ebvg_dct=gal_do.t, gal_do.a,gal_do.e
 
-  GA_filename = model.pick_GALAXY_template(tau, age, filename_0_galaxy, all_tau, all_age)
-
-  
-  EBV_gal_0 = model.pick_EBV_grid(EBVgal_array,GAebv)
- 
-#  EBV_gal = '{0:.1g}'.format(num)
-  EBV_gal = (  str(int(EBV_gal_0)) if  float(EBV_gal_0).is_integer() else str(EBV_gal_0))
-#  EBV_gal = ( str('%.0g'%EBV_gal_0) if  float(EBV_gal_0)==0. else str(EBV_gal_0))
-
-  if (GA_filename, EBV_gal) in GALAXYFdict:
-    bands, gal_Fnu = GALAXYFdict[GA_filename, EBV_gal]
-  else: 
-    print 'Error: Dictionary does not contain key of ', GA_filename, '%.1f'%EBV_gal_0, ' or the E(B-V) grid or the DICTIONARIES_AGNfitter file does not match when the one used in PARAMETERSPACE_AGNfitter/ymodel.py'
+  # Call fluxes from dictionary using keys-values
+  bands, gal_Fnu = GALAXYFdict[tau_dct, age_dct,ebvg_dct] 
 
   gal_Fnu_norm = gal_Fnu / 1e18
 
@@ -359,7 +336,7 @@ class adict(dict):
 
     """ A dictionary with attribute-style access. It maps attribute
     access to the real dictionary.
-    Class is part of Barak package by Neil Chrighton)
+    This class has been obtained from the Barak package by Neil Chrighton)
     """
 
     def __init__(self, *args, **kwargs):

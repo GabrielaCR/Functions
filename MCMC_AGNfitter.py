@@ -104,7 +104,7 @@ def main(data, P, mc):
     catalog = data.catalog
     sourcename = data.name
     data.DICTS(mc)
-    dict_modelsfiles =data.dict_modelsfiles
+    dictkey_arrays =data.dictkey_arrays
     dict_modelfluxes =data.dict_modelfluxes
     z = data.z
 
@@ -122,7 +122,7 @@ def main(data, P, mc):
 
     sampler = emcee.EnsembleSampler(
         mc['Nwalkers'], Npar, parspace.ln_probab,
-        args=[x, ydata, ysigma, z, dict_modelsfiles, dict_modelfluxes,  P],  daemon= True)
+        args=[x, ydata, ysigma, z, dictkey_arrays, dict_modelfluxes,  P],  daemon= True)
 
 # Burn-in process: Just the last point visited here is relevant. Chains are discarted
 

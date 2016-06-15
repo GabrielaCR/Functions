@@ -52,49 +52,51 @@ Functions which are used to map from a parameter space vector into a model compo
 """
 
 
-def pick_STARBURST_template(ir_lum, filename_0, ir_lum_0):
+def pick_STARBURST_template(ir_lum, irlum_dict):
 
-	idx = (np.abs(ir_lum_0-ir_lum)).argmin()
-	filename = filename_0[idx]
-	filename = 'models/STARBURST/'+str(filename) 
-
-	return filename
+	idx = (np.abs(irlum_dict.astype(float)-ir_lum)).argmin()
+	return irlum_dict[idx]
 
 #======================
 #   PICK BBB TEMPLATE
 #======================
 
 
-def pick_BBB_template():
-	return 'models/BBB/richardsbbb.dat'
+def pick_BBB_template(ebvb,ebvb_dict):
+	
+	ebvb_idx = (np.abs(ebvb_dict.astype(float)-ebvb)).argmin()
 
-
+	return ebvb_dict[ebvb_idx]
 #======================
 #   PICK GALAXY TEMPLATE
 #======================
 
 
-def pick_GALAXY_template( tau, age, filename_0, tau_sep, age_sep):
-
-    
-    idx = (np.abs((tau_sep-tau) + (age_sep-age))).argmin()	
-    filename = filename_0[idx]
-    filename = 'models/GALAXY/'+str(filename)
-
-
-    return filename 
+def pick_GALAXY_template( tau, age, ebvg, tau_dict, age_dict, ebvg_dict):
+	tauidx = (np.abs(tau_dict.astype(float)-tau)).argmin()	
+	ageidx = (np.abs(age_dict.astype(float)-age)).argmin()
+	ebvidx = (np.abs(ebvg_dict.astype(float)-ebvg)).argmin()
+	return tau_dict[tauidx], age_dict[ageidx], ebvg_dict[ebvidx]
 
 
-def pick_TORUS_template(nh, file_nh, filename_0):
-	
-	file_nh=file_nh.astype(float)
+def imin(seq):
+    it=iter(seq)
+    im=0
+    try: m=it.next()
+    except StopIteration: raise ValueError("the sequence is empty")
+    for i,e in enumerate(it,start=1):
+        if e<m:
+            m=e
+            im=i
+    return im
 
-	idx = (np.abs(file_nh-nh)).argmin()
-
-	filename = filename_0[idx]
 
 
-	return filename 
+def pick_TORUS_template(nh, nh_dict):
+
+	idx = (np.abs(nh_dict.astype(float)-nh)).argmin()
+
+	return nh_dict[idx]
 
 def pick_EBV_grid (EBV_array, EBV):
 
@@ -200,7 +202,6 @@ def STARBURST_read (fn):
 	dh_Fnu = dh_Fnu[::-1]
 
 	return dh_nus, dh_Fnu
-
 
 
 def STARBURST_interp2data(dh_nu, dh_Fnu, data_nu, z):
@@ -956,40 +957,22 @@ def interpolate_DictandData(bands, filtered_model_Fnus, data_nus):
 #==================================================================
 
 
+# def interp_models_2_filterlambdas (model_nus, model_fluxes, lambdas_filter):
 
+# 	t0 = time.time
+# 	model_lambdas = nu2lambda_angstrom(model_nus)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-#----------------------CONVERT TO NU AND INTRPOL
-def interp_models_2_filterlambdas (model_nus, model_fluxes, lambdas_filter):
-
-	t0 = time.time
-	model_lambdas = nu2lambda_angstrom(model_nus)
-
-
-
-	model_lambdas = 	model_lambdas[::-1]
-	model_fluxes_nu = model_fluxes[::-1]
+# 	model_lambdas = 	model_lambdas[::-1]
+# 	model_fluxes_nu = model_fluxes[::-1]
 	
-	#convert model F_nu to model F_lambda per angstrom
-	model_fluxes_lambda = fluxnu_2_fluxlambda(model_fluxes_nu, model_nus) 
+# 	#convert model F_nu to model F_lambda per angstrom
+# 	model_fluxes_lambda = fluxnu_2_fluxlambda(model_fluxes_nu, model_nus) 
 
-	mod2filter_interpol = interp1d(model_lambdas, model_fluxes_lambda, bounds_error=False, fill_value=0.)
-	modelfluxes_at_filterlambdas = mod2filter_interpol(lambdas_filter)
+# 	mod2filter_interpol = interp1d(model_lambdas, model_fluxes_lambda, bounds_error=False, fill_value=0.)
+# 	modelfluxes_at_filterlambdas = mod2filter_interpol(lambdas_filter)
 
 
-	return modelfluxes_at_filterlambdas
+# 	return modelfluxes_at_filterlambdas
 
 
 
@@ -1090,7 +1073,7 @@ def TORUS_read_4plotting(tor_file,z, all_model_nus):
 
 
 
-def GALAXY_read_4plotting(galaxy_file, all_model_nus):
+def GALAXY_read_4plotting(tau_dct, age_dct, ebvg_dct, all_model_nus):
 
 	gal_wl_rest, gal_flux_la = np.loadtxt(galaxy_file, skiprows=2, usecols=(0,1),unpack= True)
 	gal_Fnu_r= gal_flux_la * 3.34e-19 * gal_wl_rest**2.  
@@ -1125,9 +1108,6 @@ def BBB_read_4plotting(fn, all_model_nus):
 	bbb_Fnus = BB(10**all_model_nus)
 
 	return all_model_nus, bbb_Fnus
-
-
-
 
 
 
